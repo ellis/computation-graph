@@ -10,6 +10,8 @@ private case class ClassA(s: String, n: Int)
 
 class EntityBaseSpec extends FunSpec with GivenWhenThen {
 	describe("DataBase") {
+		val tpeA = typeOf[ClassA]
+		
 		it("should read back the same entities as those stored, with time=Nil") {
 			val db = new EntityBase
 			val l = List[(String, ClassA)](
@@ -27,7 +29,6 @@ class EntityBaseSpec extends FunSpec with GivenWhenThen {
 		
 		it("should read back equivalent entities as those stored with time != Nil") {
 			val db = new EntityBase
-			val tpeA = typeOf[ClassA]
 			val jsval0 = ClassA("_", 0)
 			val jsval1 = ClassA("a", 1)
 			val jsval2 = ClassA("b", 2)
@@ -62,29 +63,33 @@ class EntityBaseSpec extends FunSpec with GivenWhenThen {
 			// Should find jsval2 at time 3
 			assert(db.selectEntity(tpeA, "ID", List(3)) === Some(jsval2))
 		}
-		/*
-		it("should handle state changes when adding a new field") {
-			val tkp = TKP("vesselState", "P1(A01)", Nil)
+		
+		it("should handle state changes") {
 			val time11 = List(1, 1)
 			val time1122 = List(1, 1, 2, 2)
-			val time1122_+ = List(1, 1, 2, 2, Int.MaxValue)
-			val jsval1 = JsonParser("""{"id":"P1(A01)","content":{"water":"100ul"}}""")
-			val jsval2 = JsonParser("""{"id":"P1(A01)","content":{"water":0.00275},"isInitialVolumeKnown":null}""")
+			val time1123 = List(1, 1, 2, 3)
+			val time1124 = List(1, 1, 2, 4)
+			val jsval1 = ClassA("a", 1)
+			val jsval2 = ClassA("b", 2)
+			val selector = Selector_Entity(tpeA, "ID")
 			
-			val db = new DataBase
-			db.storeEntity(tpeA, "ID", List(0), jsval1)
-			assert(db.getBefore(tkp, time11) === RqSuccess(jsval1))
-			assert(db.getBefore(tkp, time1122) === RqSuccess(jsval1))
+			val db = new EntityBase
+			db.storeEntity(tpeA, "ID", time11, jsval1)
+			assert(db.selectEntity(selector, List(0)) === None)
+			assert(db.selectEntity(selector, time11) === Some(jsval1))
+			assert(db.selectEntity(selector, time1122) === Some(jsval1))
 
-			info(db.toString)
-			db.storeEntity(tkp, time1122_+, jsval2)
-			info(db.toString)
-			assert(db.selectEntity(tkp, time1122_+) === RqSuccess(jsval2))
-			assert(db.selectEntity(tpeA, "ID", List(0)) === RqSuccess(jsval1))
-			assert(db.getBefore(tkp, time1122_+) === RqSuccess(jsval1))
-			assert(db.getBefore(tkp, time1122) === RqSuccess(jsval1))
+			//info(db.toString)
+			db.storeEntity(tpeA, "ID", time1123, jsval2)
+			//info(db.toString)
+			assert(db.selectEntity(selector, Nil) === None)
+			assert(db.selectEntity(selector, List(0)) === None)
+			assert(db.selectEntity(selector, time11) === Some(jsval1))
+			assert(db.selectEntity(selector, time1122) === Some(jsval1))
+			assert(db.selectEntity(selector, time1123) === Some(jsval2))
+			assert(db.selectEntity(selector, time1124) === Some(jsval2))
 		}
-
+		/*
 		it("should read back all entities in table with getAll()") {
 			val jsvalA = JsObject("s" -> JsString("a"), "n" -> JsNumber(1))
 			val jsvalB = JsObject("s" -> JsString("b"), "n" -> JsNumber(2))
