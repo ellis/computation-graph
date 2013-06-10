@@ -2,7 +2,7 @@ package ch.ethz.computationgraph
 
 import scala.reflect.runtime.universe.Type
 
-case class Call(fn: List[Object] => List[CallResultItem])
+case class Call(fn: List[Object] => List[CallResultItem], args: List[Selector])
 
 trait CallResultItem
 case class CallResultItem_Entity(tpe: Type, id: String, entity: Object) extends CallResultItem

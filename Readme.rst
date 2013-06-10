@@ -41,7 +41,12 @@ Demonstration
 -------------
 
 * Typical GUI example of typing text and fetching data
-* Example of tracing changes to an image (e.g. exampel from "Make flow tangible" at Bret Victor, Learnable Programming)
+* Example of tracing changes to an image (e.g. example from "Make flow tangible" at Bret Victor, Learnable Programming)
+
+Enhancements
+------------
+
+* Selector_Field -- select a field from an entity rather than the entire entity
 
 Related topics
 --------------
