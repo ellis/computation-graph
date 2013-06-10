@@ -36,18 +36,21 @@ class EntityBase {
 		}
 	}
 	
-	def selectEntity(selector: Selector_Entity, time: List[Int]): Option[Object] = {
-		idToTimeToEntity_m.get(selector.id) match {
+	def selectEntity(tpe: Type, id: String, time: List[Int], isOptional: Boolean = false): Option[Object] = {
+		idToTimeToEntity_m.get(id) match {
 			case None => None
-			case Some((tpe, timeToEntity_m)) =>
-				if (tpe != selector.tpe) {
-					logger.error(s"type mismatch for id `${selector.id}`")
+			case Some((tpe0, timeToEntity_m0)) =>
+				if (tpe0 != tpe) {
+					logger.error(s"type mismatch for id `${id}`")
 					None
 				}
 				else
-					entityAtOrBeforeTime(timeToEntity_m, time)
+					entityAtOrBeforeTime(timeToEntity_m0, time)
 		}
 	}
+
+	def selectEntity(selector: Selector_Entity, time: List[Int]): Option[Object] =
+		selectEntity(selector.tpe, selector.id, time, selector.isOptional)
 	
 	private def entityAtOrBeforeTime(timeToEntity_m: SortedMap[List[Int], Object], time: List[Int]): Option[Object] = {
 		var entity_? : Option[Object] = None

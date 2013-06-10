@@ -25,45 +25,44 @@ class EntityBaseSpec extends FunSpec with GivenWhenThen {
 			}
 		}
 		
-		/*
-		it("should read back equivalent JsValues as those set with time != Nil") {
+		it("should read back equivalent entities as those stored with time != Nil") {
+			val db = new EntityBase
+			val tpeA = typeOf[ClassA]
 			val jsval0 = ClassA("_", 0)
 			val jsval1 = ClassA("a", 1)
 			val jsval2 = ClassA("b", 2)
-			val tkp = TKP("TABLE", "KEY", Nil)
-
-			val db = new EntityBase
+			val selector0 = Selector_Entity(tpeA, "ID")
 
 			// Database is empty, so element shouldn't be found.
-			assert(db.get(tkp).isError)
+			assert(db.selectEntity(selector0, Nil).isEmpty)
 			
 			// Set object at time 0
-			db.setAt(tkp, List(0), jsval0)
+			db.storeEntity(tpeA, "ID", List(0), jsval0)
 			// Object should now be found at time 0
-			assert(db.getAt(tkp, List(0)) === RqSuccess(jsval0))
+			assert(db.selectEntity(selector0, List(0)) === Some(jsval0))
 
 			// Update object at time 1
-			db.setAt(tkp, List(1), jsval1)
+			db.storeEntity(tpeA, "ID", List(1), jsval1)
 			// Updated object should be found at time 1
-			assert(db.getAt(tkp, List(1)) === RqSuccess(jsval1))
+			assert(db.selectEntity(tpeA, "ID", List(1)) === Some(jsval1))
 			
 			// Update object again at time 2
-			db.setAt(tkp, List(2), jsval2)
+			db.storeEntity(tpeA, "ID", List(2), jsval2)
 			// Updated object should be found at time 2
-			assert(db.getAt(tkp, List(2)) === RqSuccess(jsval2))
+			assert(db.selectEntity(tpeA, "ID", List(2)) === Some(jsval2))
 
 			// No object set at time=Nil, so shouldn't find one
-			assert(db.get(tkp).isError)
+			assert(db.selectEntity(tpeA, "ID", Nil).isEmpty)
 			// Should still find original object at time 0
-			assert(db.getAt(tkp, List(0)) === RqSuccess(jsval0))
+			assert(db.selectEntity(tpeA, "ID", List(0)) === Some(jsval0))
 			// Should also find original object at time 0.1
-			assert(db.getAt(tkp, List(0, 1)) === RqSuccess(jsval0))
+			assert(db.selectEntity(tpeA, "ID", List(0, 1)) === Some(jsval0))
 			// Should still jsval1 at time 1
-			assert(db.getAt(tkp, List(1)) === RqSuccess(jsval1))
+			assert(db.selectEntity(tpeA, "ID", List(1)) === Some(jsval1))
 			// Should find jsval2 at time 3
-			assert(db.getAt(tkp, List(3)) === RqSuccess(jsval2))
+			assert(db.selectEntity(tpeA, "ID", List(3)) === Some(jsval2))
 		}
-		
+		/*
 		it("should handle state changes when adding a new field") {
 			val tkp = TKP("vesselState", "P1(A01)", Nil)
 			val time11 = List(1, 1)
@@ -73,15 +72,15 @@ class EntityBaseSpec extends FunSpec with GivenWhenThen {
 			val jsval2 = JsonParser("""{"id":"P1(A01)","content":{"water":0.00275},"isInitialVolumeKnown":null}""")
 			
 			val db = new DataBase
-			db.setAt(tkp, List(0), jsval1)
+			db.storeEntity(tpeA, "ID", List(0), jsval1)
 			assert(db.getBefore(tkp, time11) === RqSuccess(jsval1))
 			assert(db.getBefore(tkp, time1122) === RqSuccess(jsval1))
 
 			info(db.toString)
-			db.setAt(tkp, time1122_+, jsval2)
+			db.storeEntity(tkp, time1122_+, jsval2)
 			info(db.toString)
-			assert(db.getAt(tkp, time1122_+) === RqSuccess(jsval2))
-			assert(db.getAt(tkp, List(0)) === RqSuccess(jsval1))
+			assert(db.selectEntity(tkp, time1122_+) === RqSuccess(jsval2))
+			assert(db.selectEntity(tpeA, "ID", List(0)) === RqSuccess(jsval1))
 			assert(db.getBefore(tkp, time1122_+) === RqSuccess(jsval1))
 			assert(db.getBefore(tkp, time1122) === RqSuccess(jsval1))
 		}
