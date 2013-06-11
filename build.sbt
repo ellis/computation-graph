@@ -10,5 +10,7 @@ libraryDependencies ++= Seq(
 	"org.scalaz" %% "scalaz-core" % "7.0.0",
 	"org.clapper" %% "grizzled-slf4j" % "1.0.1",
 	"ch.qos.logback" % "logback-classic" % "1.0.7",
-	"org.scalatest" % "scalatest_2.10" % "1.9.1" % "test"
+	"org.scalatest" % "scalatest_2.10" % "1.9.1" % "test",
+	"org.scalafx" % "scalafx_2.10" % "1.0.0-M4"
+	"org.scala-lang" % "scala-swing" % "2.10.1"
 )
