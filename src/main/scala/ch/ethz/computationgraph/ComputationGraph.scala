@@ -4,12 +4,23 @@ import scala.collection.mutable.HashMap
 import scalaz._
 import Scalaz._
 import grizzled.slf4j.Logger
+import scala.collection.mutable.ArrayBuffer
 
 class ComputationGraph {
 	private val logger = Logger[this.type]
 
 	val db = new EntityBase
 	val selectorToValue_m = new HashMap[Selector, Object]
+	val call_l = new ArrayBuffer[Call]
+	val callChildren_m = new HashMap[Call, List[Call]]
+	
+	def addCall(call: Call) {
+		call_l += call
+	}
+	
+	def run() {
+		
+	}
 	
 	def processCall(call: Call, time: List[Int]) {
 		call.args.map(selector => lookup(selector, time)).sequence match {
