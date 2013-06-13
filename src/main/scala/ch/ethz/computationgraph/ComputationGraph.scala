@@ -24,14 +24,19 @@ case class SelectorNode(tpe: Type) extends GraphNode {
 	override def toString = tpe.toString+"*" //@"+time.map(_ + 1).mkString(".")
 }
 
+/**
+ * Waiting waiting for inputs to become available
+ * Ready inputs are all available
+ * Next can be executed in the next step
+ */
 object CallStatus extends Enumeration {
-	val Waiting, Ready, Success, Error = Value
+	val Waiting, Ready, Next, Success, Error = Value
 }
 
 class X(
-	timeToCall: Map[List[Int], Call],
-	db: EntityBase2,
-	g: Graph[GraphNode, UnDiEdge]
+	val timeToCall: Map[List[Int], Call],
+	val db: EntityBase2,
+	val g: Graph[GraphNode, UnDiEdge]
 ) {
 	def +(cmd: Command): X = {
 		cmd match {
@@ -72,6 +77,53 @@ class X(
 				Graph[GraphNode, UnDiEdge](SelectorNode(s.tpe) ~> callNode)
 		}
 	}
+	
+	private def calcCallStatus(
+		timeToCall: Map[List[Int], Call],
+		db: EntityBase2,
+		g: Graph[GraphNode, UnDiEdge],
+		time: List[Int]
+	) {
+		val ready = g.get(CallNode(time)).incoming.filter(_.isInstanceOf[EntityNode]).forall(n => db.contains(n.asInstanceOf[EntityNode].id, time))
+		
+	}
+	
+	/**
+	 * Return all ready nodes which don't depend on state,
+	 * plus the next node which depends on state after exclusively successful nodes.
+	 */
+	private def makePendingComputationList(node_l: List[Node]): List[NodeState] = {
+		val order_l = state_m.values.toList.sortBy(_.node.time)(ListIntOrdering).dropWhile(_.status == Status.Success)
+		// Find first node which isn't ready and depends on state
+		val blocker_? = order_l.find(state => state.status == Status.NotReady && state.node.input_l.exists(_.kc.key.table.endsWith("State")))
+		val timeEnd = blocker_?.map(_.node.time).getOrElse(List(Int.MaxValue))
+		println()
+		println(s"makePending (<= $timeEnd)")
+		order_l.foreach(state => 
+			println(state.node.time + " " + state.status.toString.take(1) + " " + state.node.id + ": " + state.node.contextKey_?.map(_.id + " ").getOrElse("") + state.node.desc)
+		)
+		println()
+		
+		order_l.filter(state => state.status == Status.Ready && ListIntOrdering.compare(state.node.time, timeEnd) <= 0)
+		/*
+		//val order_l = state_m.toList.sortBy(_._1.path)(ListIntOrdering).map(_._2).dropWhile(_.status == Status.Success)
+		order_l match {
+			case Nil => Nil
+			case next :: _ =>
+				val timeNext = next.node.time
+				val (prefix_l, suffix_l) = order_l.span(_.node.time == timeNext)
+				val next_l = prefix_l.filter(_.status == Status.Ready)
+				val ready_l = suffix_l.filter(state => {
+					// Node is ready
+					state.status == Status.Ready &&
+					// And it doesn't depend on state
+					state.node.input_l.forall(kco => !kco.kc.key.table.endsWith("State"))
+				})
+				// Take next node if it's ready (regardless of whether it depends on state)
+				next_l ++ ready_l
+		}*/
+	}
+	
 }
 
 class ComputationGraphBuilder {

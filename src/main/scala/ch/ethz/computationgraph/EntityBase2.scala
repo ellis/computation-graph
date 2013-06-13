@@ -44,4 +44,11 @@ class EntityBase2(
 		}
 		entity_?
 	}
+	
+	def contains(id: String, time: List[Int]): Boolean = {
+		for ((time2, idToEntity) <- timeToIdToEntity if ListIntOrdering.compare(time2, time) <= 0 && idToEntity.contains(id)) {
+			return true
+		}
+		return false
+	}
 }
