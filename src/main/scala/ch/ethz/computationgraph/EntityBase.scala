@@ -24,6 +24,13 @@ class EntityBase {
 	private implicit val listIntOrdering = ListIntOrdering
 	private val idToTimeToEntity_m = new HashMap[String, (Type, SortedMap[List[Int], Object])]
 
+	def contains(tpe: Type, id: String): Boolean = {
+		idToTimeToEntity_m.get(id) match {
+			case None => false
+			case Some((tpe0, timeToEntity_m0)) => tpe0 =:= tpe // FIXME: tpe0 can be a superclass of tpe
+		}
+	}
+	
 	def storeEntity(tpe: Type, id: String, time: List[Int], entity: Object) {
 		idToTimeToEntity_m.get(id) match {
 			case None =>
