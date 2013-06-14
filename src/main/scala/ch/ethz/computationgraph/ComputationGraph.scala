@@ -7,7 +7,10 @@ import scalaz._
 import Scalaz._
 import grizzled.slf4j.Logger
 import scala.collection.mutable.ArrayBuffer
-import scalax.collection.Graph, scalax.collection.GraphPredef._, scalax.collection.GraphEdge._
+import scalax.collection.Graph
+import scalax.collection.GraphPredef._
+import scalax.collection.GraphEdge._
+import scala.collection.SortedMap
 
 trait Command
 case class Command_SetEntity(tpe: Type, id: String, time: List[Int], entity: Object) extends Command
@@ -34,28 +37,39 @@ object CallStatus extends Enumeration {
 }
 
 class X(
+	val g: Graph[GraphNode, UnDiEdge],
 	val timeToCall: Map[List[Int], Call],
-	val db: EntityBase2,
-	val g: Graph[GraphNode, UnDiEdge]
+	val timeToStatus: Map[List[Int], CallStatus.Value],
+	val db: EntityBase3
 ) {
 	def +(cmd: Command): X = {
 		cmd match {
 			case Command_SetEntity(tpe, id, time, entity) =>
-				val db2 = db.addEntity(tpe, id, time, entity)
+				val db2 = db.setEntity(time, id, entity)
 				new X(
+					g,
 					timeToCall,
-					db2,
-					g
+					timeToStatus,
+					db2
 				)
 			case Command_AddCall(call, time) =>
-				val timeToCall2 = timeToCall + (time -> call)
 				val g2 = g ++ addCall(call, time)
+				val timeToCall2 = timeToCall + (time -> call)
+				val timeToStatus2 = calcCallStatus(g2, timeToCall2, db)
 				new X(
+					g2,
 					timeToCall2,
-					db,
-					g2
+					timeToStatus2,
+					db
 				)
 		}
+	}
+	
+	def addCall(call: Call): X = {
+		val time =
+			if (timeToCall.isEmpty) List(0)
+			else List(timeToCall.keys.max(ListIntOrdering).head + 1)
+		this + Command_AddCall(call, time)
 	}
 
 	/**
@@ -79,53 +93,34 @@ class X(
 	}
 	
 	private def calcCallStatus(
-		timeToCall: Map[List[Int], Call],
-		db: EntityBase2,
 		g: Graph[GraphNode, UnDiEdge],
-		time: List[Int]
-	) {
-		val ready = g.get(CallNode(time)).incoming.filter(_.isInstanceOf[EntityNode]).forall(n => db.contains(n.asInstanceOf[EntityNode].id, time))
-		
+		timeToCall: Map[List[Int], Call],
+		db: EntityBase3
+	): Map[List[Int], CallStatus.Value] = {
+		val timeToIdToEntities = db.getEntities
+		timeToCall.map(pair => {
+			val time = pair._1
+			val status = timeToIdToEntities.get(time) match {
+				case None => CallStatus.Waiting
+				case Some(idToEntities) =>
+					val ready =
+						// Get entities required by the call node
+						g.get(CallNode(time)).incoming.filter(_.isInstanceOf[EntityNode])
+						// check whether the database has values for them all
+						.forall(n => idToEntities.contains(n.asInstanceOf[EntityNode].id))
+					if (ready) CallStatus.Ready else CallStatus.Waiting
+			}
+			time -> status
+		})
 	}
-	
-	/**
-	 * Return all ready nodes which don't depend on state,
-	 * plus the next node which depends on state after exclusively successful nodes.
-	 */
-	private def makePendingComputationList(node_l: List[Node]): List[NodeState] = {
-		val order_l = state_m.values.toList.sortBy(_.node.time)(ListIntOrdering).dropWhile(_.status == Status.Success)
-		// Find first node which isn't ready and depends on state
-		val blocker_? = order_l.find(state => state.status == Status.NotReady && state.node.input_l.exists(_.kc.key.table.endsWith("State")))
-		val timeEnd = blocker_?.map(_.node.time).getOrElse(List(Int.MaxValue))
-		println()
-		println(s"makePending (<= $timeEnd)")
-		order_l.foreach(state => 
-			println(state.node.time + " " + state.status.toString.take(1) + " " + state.node.id + ": " + state.node.contextKey_?.map(_.id + " ").getOrElse("") + state.node.desc)
-		)
-		println()
-		
-		order_l.filter(state => state.status == Status.Ready && ListIntOrdering.compare(state.node.time, timeEnd) <= 0)
-		/*
-		//val order_l = state_m.toList.sortBy(_._1.path)(ListIntOrdering).map(_._2).dropWhile(_.status == Status.Success)
-		order_l match {
-			case Nil => Nil
-			case next :: _ =>
-				val timeNext = next.node.time
-				val (prefix_l, suffix_l) = order_l.span(_.node.time == timeNext)
-				val next_l = prefix_l.filter(_.status == Status.Ready)
-				val ready_l = suffix_l.filter(state => {
-					// Node is ready
-					state.status == Status.Ready &&
-					// And it doesn't depend on state
-					state.node.input_l.forall(kco => !kco.kc.key.table.endsWith("State"))
-				})
-				// Take next node if it's ready (regardless of whether it depends on state)
-				next_l ++ ready_l
-		}*/
-	}
-	
 }
 
+object X {
+	def apply(): X =
+		new X(Graph(), Map(), Map(), new EntityBase3(Map(), Map(), SortedMap()(ListIntOrdering)))
+}
+
+/*
 class ComputationGraphBuilder {
 	val db = new EntityBase
 	var g = Graph[GraphNode, UnDiEdge]()
@@ -188,6 +183,7 @@ class ComputationGraphBuilder {
 	
 	
 }
+*/
 
 class ComputationGraph {
 	private val logger = Logger[this.type]

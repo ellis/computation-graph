@@ -32,6 +32,16 @@ Selector/value map
 Event list
 Call/Output cache
 
+Entity data structure
+---------------------
+
+Immutable entities are available to all calls.
+In contrast, the availability of mutable entities is more complex.
+Entities which have been set at time 1 (the "initial state" of the system) are available to call 1.
+Since the first call might change any of the mutable entities, they are all masked from the call 2 until call 1 has completed.
+If the programmer specifies constraints for which entities call 1 can change, however, then all other mutable entities are available to call 2
+even before call 1 completes.
+
 Missing data
 ------------
 

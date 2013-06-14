@@ -30,14 +30,14 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 		val tpeA = typeOf[ClassA]
 		
 		it("Call to `call0` should store output entity at next time step") {
-			val cgb = new ComputationGraphBuilder
-			cgb.addCall(call0, List(0))
-			println(cgb.g)
+			val x0 = X()
+			val x1 = x0.addCall(call0)
+			println(x1.g)
 		}
 		
 		it("calls should only be invoked when all inputs are available") {
-			val cgb = new ComputationGraphBuilder
-			cgb.addCall(call1, List(0))
+			val cgb = X()
+			cgb.addCall(call1)
 			println(cgb.g)
 			//cgb.db.storeEntity(typeOf[String], "name", List(0), "John")
 		}
