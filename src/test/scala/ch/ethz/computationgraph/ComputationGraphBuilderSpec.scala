@@ -36,9 +36,9 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 		}
 		
 		it("calls should only be invoked when all inputs are available") {
-			val cgb = X()
-			cgb.addCall(call1)
-			println(cgb.g)
+			val x0 = X()
+			val x1 = x0.addCall(call1)
+			println(x1.g)
 			//cgb.db.storeEntity(typeOf[String], "name", List(0), "John")
 		}
 		
