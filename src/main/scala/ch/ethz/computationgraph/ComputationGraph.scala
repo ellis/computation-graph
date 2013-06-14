@@ -36,38 +36,46 @@ object CallStatus extends Enumeration {
 	val Waiting, Ready, Next, Success, Error = Value
 }
 
-class X(
+case class X(
 	val g: Graph[GraphNode, UnDiEdge],
+	val db: EntityBase3,
 	val timeToCall: Map[List[Int], Call],
-	val timeToStatus: Map[List[Int], CallStatus.Value],
-	val db: EntityBase3
+	val timeToIdToEntity: SortedMap[List[Int], Map[String, Object]],
+	val timeToStatus: Map[List[Int], CallStatus.Value]
 ) {
 	def +(cmd: Command): X = {
 		cmd match {
 			case Command_SetEntity(tpe, id, time, entity) =>
+				val g2 = g + EntityNode(id)
 				val db2 = db.setEntity(time, id, entity)
+				val timeToIdToEntity2 = db2.getEntities
+				val timeToStatus2 = calcCallStatus(g2, db2, timeToCall, timeToIdToEntity2)
 				new X(
-					g,
+					g2,
+					db2,
 					timeToCall,
-					timeToStatus,
-					db2
+					timeToIdToEntity2,
+					timeToStatus2
 				)
 			case Command_AddCall(call, time) =>
 				val g2 = g ++ addCall(call, time)
+				val db2 = db.registerCall(time, None)
 				val timeToCall2 = timeToCall + (time -> call)
-				val timeToStatus2 = calcCallStatus(g2, timeToCall2, db)
+				val timeToIdToEntity2 = db2.getEntities
+				val timeToStatus2 = calcCallStatus(g2, db2, timeToCall2, timeToIdToEntity2)
 				new X(
 					g2,
+					db2,
 					timeToCall2,
-					timeToStatus2,
-					db
+					timeToIdToEntity2,
+					timeToStatus2
 				)
 		}
 	}
 	
 	def addCall(call: Call): X = {
 		val time =
-			if (timeToCall.isEmpty) List(0)
+			if (timeToCall.isEmpty) List(1)
 			else List(timeToCall.keys.max(ListIntOrdering).head + 1)
 		this + Command_AddCall(call, time)
 	}
@@ -94,18 +102,18 @@ class X(
 	
 	private def calcCallStatus(
 		g: Graph[GraphNode, UnDiEdge],
+		db: EntityBase3,
 		timeToCall: Map[List[Int], Call],
-		db: EntityBase3
+		timeToIdToEntity: SortedMap[List[Int], Map[String, Object]]
 	): Map[List[Int], CallStatus.Value] = {
-		val timeToIdToEntities = db.getEntities
 		timeToCall.map(pair => {
 			val time = pair._1
-			val status = timeToIdToEntities.get(time) match {
+			val status = timeToIdToEntity.get(time) match {
 				case None => CallStatus.Waiting
 				case Some(idToEntities) =>
 					val ready =
 						// Get entities required by the call node
-						g.get(CallNode(time)).incoming.filter(_.isInstanceOf[EntityNode])
+						g.get(CallNode(time)).incoming -- FIX THIS --.filter(_.isInstanceOf[EntityNode])
 						// check whether the database has values for them all
 						.forall(n => idToEntities.contains(n.asInstanceOf[EntityNode].id))
 					if (ready) CallStatus.Ready else CallStatus.Waiting
@@ -117,7 +125,7 @@ class X(
 
 object X {
 	def apply(): X =
-		new X(Graph(), Map(), Map(), new EntityBase3(Map(), Map(), SortedMap()(ListIntOrdering)))
+		new X(Graph(), new EntityBase3(Map(), Map(), SortedMap()(ListIntOrdering)), Map(), SortedMap()(ListIntOrdering), Map())
 }
 
 /*
