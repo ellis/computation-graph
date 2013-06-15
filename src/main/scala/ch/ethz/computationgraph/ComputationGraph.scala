@@ -41,7 +41,7 @@ case class X(
 	val db: EntityBase3,
 	val timeToCall: Map[List[Int], Call],
 	val timeToIdToEntity: SortedMap[List[Int], Map[String, Object]],
-	val timeToStatus: Map[List[Int], CallStatus.Value]
+	val timeToStatus: SortedMap[List[Int], CallStatus.Value]
 ) {
 	def +(cmd: Command): X = {
 		cmd match {
@@ -54,7 +54,11 @@ case class X(
 				}
 				val db2 = db.setEntity(time, id, entity)
 				val timeToIdToEntity2 = db2.getEntities
-				val timeToStatus2 = calcCallStatus(g2, db2, timeToCall, timeToIdToEntity2)
+				val timeToStatus1 = callStatusCheck(g2, time, id)
+				val timeToStatus2 = calcCallStatus(g2, db2, timeToCall, timeToIdToEntity2, timeToStatus1)
+				println("timeToStatus: "+timeToStatus)
+				println("timeToStatus1: "+timeToStatus1)
+				println("timeToStatus2: "+timeToStatus2)
 				new X(
 					g2,
 					db2,
@@ -67,7 +71,7 @@ case class X(
 				val db2 = db.registerCall(time, None)
 				val timeToCall2 = timeToCall + (time -> call)
 				val timeToIdToEntity2 = db2.getEntities
-				val timeToStatus2 = calcCallStatus(g2, db2, timeToCall2, timeToIdToEntity2)
+				val timeToStatus2 = calcCallStatus(g2, db2, timeToCall2, timeToIdToEntity2, timeToStatus)
 				new X(
 					g2,
 					db2,
@@ -122,33 +126,42 @@ case class X(
 		}
 	}
 	
+	private def callStatusCheck(
+		g: Graph[GraphNode, UnDiEdge],
+		time: List[Int],
+		id: String
+	): SortedMap[List[Int], CallStatus.Value] = {
+		val callNodes = g.get(EntityNode(id)).diSuccessors.toOuterNodes.collect({case n: CallNode => n})
+		timeToStatus ++ callNodes.map(n => n.time -> CallStatus.Check)
+	}
+	
 	private def calcCallStatus(
 		g: Graph[GraphNode, UnDiEdge],
 		db: EntityBase3,
 		timeToCall: Map[List[Int], Call],
-		timeToIdToEntity: SortedMap[List[Int], Map[String, Object]]
-	): Map[List[Int], CallStatus.Value] = {
+		timeToIdToEntity: SortedMap[List[Int], Map[String, Object]],
+		timeToStatus: SortedMap[List[Int], CallStatus.Value]
+	): SortedMap[List[Int], CallStatus.Value] = {
 		// REFACTOR: map over timeToStatus, and make timeToStatus use a SortedMap
-		timeToCall.map(pair => {
-			val (time, call) = pair
-			val status = timeToIdToEntity.get(time) match {
-				case None => CallStatus.Check
-				case Some(idToEntities) =>
-					val status0 = timeToStatus.getOrElse(time, CallStatus.Check)
-					if (status0 == CallStatus.Check) {
-						val ready =
-							// Get entities required by the call node
-							g.get(CallNode(time, call)).diPredecessors.toOuterNodes.collect({case n: EntityNode => n})
-							// check whether the database has values for them all
-							.forall(n => idToEntities.contains(n.id))
-						
-						if (ready) CallStatus.InputReady else CallStatus.InputMissing
-					}
-					else
-						status0
+		SortedMap(timeToCall.keys.toSeq.sorted(ListIntOrdering).map(time => {
+			val idToEntities = timeToIdToEntity(time)
+			val call = timeToCall(time)
+			val status = {
+				val status0 = timeToStatus.getOrElse(time, CallStatus.Check)
+				if (status0 == CallStatus.Check) {
+					val ready =
+						// Get entities required by the call node
+						g.get(CallNode(time, call)).diPredecessors.toOuterNodes.collect({case n: EntityNode => n})
+						// check whether the database has values for them all
+						.forall(n => idToEntities.contains(n.id))
+					
+					if (ready) CallStatus.InputReady else CallStatus.InputMissing
+				}
+				else
+					status0
 			}
 			time -> status
-		})
+		}).toSeq : _*)(ListIntOrdering)
 	}
 	
 	def step(): X = {
@@ -196,7 +209,7 @@ case class X(
 
 object X {
 	def apply(): X =
-		new X(Graph(), new EntityBase3(Map(), Map(), SortedMap()(ListIntOrdering)), Map(), SortedMap()(ListIntOrdering), Map())
+		new X(Graph(), new EntityBase3(Map(), Map(), SortedMap()(ListIntOrdering)), Map(), SortedMap()(ListIntOrdering), SortedMap()(ListIntOrdering))
 }
 
 /*
