@@ -70,13 +70,13 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 	
 	describe("ComputationGraph") {
 		it("call `call0` should be placed in the graph at time 1") {
-			val x0 = X()
+			val x0 = ComputationGraph()
 			val x1 = x0.addCall(call0)
 			assert(x1.g.nodes.toNodeInSet === Set(CallNode(t1, call0)))
 		}
 		
 		it("call `call1` should be ready once its input is available") {
-			val x0 = X()
+			val x0 = ComputationGraph()
 			val x1 = x0.addCall(call1)
 			//println(x1.g)
 			val cn1 = CallNode(t1, call1)
@@ -119,7 +119,7 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 	
 	describe("ComputationGraph to process text by two functions in sequence") {
 		it("should transform 'AbCdE' to 'edcba', then 'REVERSE' to 'esrever'") {
-			val x1 = X().addCall(call2).addCall(call3)
+			val x1 = ComputationGraph().addCall(call2).addCall(call3)
 			//println(x1.g)
 			val cn1 = CallNode(t1, call2)
 			val cn2 = CallNode(t2, call3)

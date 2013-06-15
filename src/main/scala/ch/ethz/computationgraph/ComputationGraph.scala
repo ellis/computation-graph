@@ -55,14 +55,14 @@ object CallStatus extends Enumeration {
 	val Check, Waiting, Ready, Success, Error = Value
 }
 
-case class X(
+case class ComputationGraph(
 	val g: Graph[GraphNode, UnDiEdge],
 	val db: EntityBase,
 	val timeToCall: Map[List[Int], Call],
 	val timeToIdToEntity: SortedMap[List[Int], Map[String, Object]],
 	val timeToStatus: SortedMap[List[Int], CallStatus.Value]
 ) {
-	def +(cmd: Command): X = {
+	def +(cmd: Command): ComputationGraph = {
 		cmd match {
 			case Command_SetEntity(time, id, entity) =>
 				val g2 = {
@@ -75,7 +75,7 @@ case class X(
 				val timeToIdToEntity2 = db2.getEntities
 				val timeToStatus1 = callStatusCheck(g2, time, id)
 				val timeToStatus2 = calcCallStatus(g2, db2, timeToCall, timeToIdToEntity2, timeToStatus1)
-				new X(
+				new ComputationGraph(
 					g2,
 					db2,
 					timeToCall,
@@ -88,7 +88,7 @@ case class X(
 				val timeToCall2 = timeToCall + (time -> call)
 				val timeToIdToEntity2 = db2.getEntities
 				val timeToStatus2 = calcCallStatus(g2, db2, timeToCall2, timeToIdToEntity2, timeToStatus)
-				new X(
+				new ComputationGraph(
 					g2,
 					db2,
 					timeToCall2,
@@ -98,18 +98,18 @@ case class X(
 		}
 	}
 	
-	def addCall(call: Call): X = {
+	def addCall(call: Call): ComputationGraph = {
 		val time =
 			if (timeToCall.isEmpty) List(1)
 			else List(timeToCall.keys.max(ListIntOrdering).head + 1)
 		this + Command_AddCall(time, call)
 	}
 	
-	def setImmutableEntity(id: String, entity: Object): X = {
+	def setImmutableEntity(id: String, entity: Object): ComputationGraph = {
 		this + Command_SetEntity(Nil, id, entity)
 	}
 	
-	def setInitialState(id: String, entity: Object): X = {
+	def setInitialState(id: String, entity: Object): ComputationGraph = {
 		this + Command_SetEntity(List(0), id, entity)
 	}
 
@@ -190,7 +190,7 @@ case class X(
 		}).toSeq : _*)(ListIntOrdering)
 	}
 	
-	def step(): X = {
+	def step(): ComputationGraph = {
 		timeToStatus.filter(_._2 == CallStatus.Ready).foldLeft(this) { (acc0, pair) =>
 			val (time, status) = pair
 			val call = acc0.timeToCall(time)
@@ -233,7 +233,7 @@ case class X(
 	}
 }
 
-object X {
-	def apply(): X =
-		new X(Graph(), new EntityBase(Map(), Map(), SortedMap()(ListIntOrdering)), Map(), SortedMap()(ListIntOrdering), SortedMap()(ListIntOrdering))
+object ComputationGraph {
+	def apply(): ComputationGraph =
+		new ComputationGraph(Graph(), new EntityBase(Map(), Map(), SortedMap()(ListIntOrdering)), Map(), SortedMap()(ListIntOrdering), SortedMap()(ListIntOrdering))
 }
