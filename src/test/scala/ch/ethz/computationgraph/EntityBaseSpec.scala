@@ -1,4 +1,4 @@
-package ch.ethz.computationgraph
+/*package ch.ethz.computationgraph
 
 import scala.reflect.runtime.{universe => ru}
 import scala.reflect.runtime.universe.typeOf
@@ -108,4 +108,4 @@ class EntityBaseSpec extends FunSpec with GivenWhenThen {
 		}
 		*/
 	}
-}
+}*/

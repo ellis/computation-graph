@@ -1,4 +1,4 @@
-package ch.ethz.computationgraph
+/*package ch.ethz.computationgraph
 
 import scala.language.existentials
 import scala.language.implicitConversions
@@ -52,3 +52,4 @@ class EntityBase2(
 		return false
 	}
 }
+*/

@@ -3,6 +3,8 @@ package ch.ethz.computationgraph
 import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
 
+private case class ClassA(s: String, n: Int)
+
 class EntityBase3Spec extends FunSpec with GivenWhenThen {
 	describe("DataBase") {
 		it("should read back the same entities as those stored, with time=Nil") {

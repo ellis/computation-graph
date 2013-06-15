@@ -2,7 +2,6 @@ package ch.ethz.computationgraph
 
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.HashSet
-import scala.reflect.runtime.universe.Type
 import scalaz._
 import Scalaz._
 import grizzled.slf4j.Logger
@@ -23,8 +22,8 @@ case class CallNode(time: List[Int], call: Call) extends GraphNode {
 case class EntityNode(id: String) extends GraphNode {
 	override def toString = id
 }
-case class SelectorNode(tpe: Type) extends GraphNode {
-	override def toString = tpe.toString+"*" //@"+time.map(_ + 1).mkString(".")
+case class SelectorNode(clazz: Class[_]) extends GraphNode {
+	override def toString = clazz.toString+"*" //@"+time.map(_ + 1).mkString(".")
 }
 
 /**
@@ -46,7 +45,12 @@ case class X(
 	def +(cmd: Command): X = {
 		cmd match {
 			case Command_SetEntity(time, id, entity) =>
-				val g2 = g + EntityNode(id)
+				val g2 = {
+					if (ListIntOrdering.compare(time, List(0)) <= 0)
+						g + EntityNode(id)
+					else
+						g + DiEdge[GraphNode](CallNode(time, timeToCall(time)), EntityNode(id))
+				}
 				val db2 = db.setEntity(time, id, entity)
 				val timeToIdToEntity2 = db2.getEntities
 				val timeToStatus2 = calcCallStatus(g2, db2, timeToCall, timeToIdToEntity2)
@@ -104,7 +108,7 @@ case class X(
 			case s: Selector_List =>
 				Graph.from(Nil, s.ids.map(id => DiEdge[GraphNode](EntityNode(id), callNode)))
 			case s: Selector_All => // FIXME: add handling for Selector_ALL
-				Graph[GraphNode, UnDiEdge](SelectorNode(s.tpe) ~> callNode)
+				Graph[GraphNode, UnDiEdge](SelectorNode(s.clazz) ~> callNode)
 		}
 	}
 	
@@ -127,6 +131,44 @@ case class X(
 					if (ready) CallStatus.Ready else CallStatus.Waiting
 			}
 			time -> status
+		})
+	}
+	
+	def step(): X = {
+		val commands = timeToStatus.toList.filter(_._2 == CallStatus.Ready).flatMap(pair => {
+			val (time, status) = pair
+			val call = timeToCall(time)
+			val idToEntity = timeToIdToEntity(time)
+			val args = call.args.map(_ match {
+				case s: Selector_Entity => idToEntity(s.id)
+				case s: Selector_List => s.ids.map(idToEntity)
+				case s: Selector_All => Nil // FIXME: add handling for Selector_ALL
+			})
+			val results = call.fn(args)
+			processCallResults(time, results)
+		})
+		commands.foldLeft(this) { (acc, cmd) => acc + cmd }
+	}
+	
+	private def processCallResults(time: List[Int], results: List[CallResultItem]): List[Command] = {
+		var childIndex = 0
+		results.map(_ match {
+			case CallResultItem_Entity(id, entity) =>
+				Command_SetEntity(time, id, entity)
+			case CallResultItem_Event(id, fn) =>
+				val call = Call(
+					fn = (args: List[Object]) => {
+						val entity0 = args.head
+						val entity1 = fn(entity0)
+						List(CallResultItem_Entity(id, entity1))
+					},
+					args = Selector_Entity(id) :: Nil
+				)
+				childIndex += 1
+				Command_AddCall(time ++ List(childIndex), call)
+			case CallResultItem_Call(call) =>
+				childIndex += 1
+				Command_AddCall(time ++ List(childIndex), call)
 		})
 	}
 }
@@ -201,6 +243,7 @@ class ComputationGraphBuilder {
 }
 */
 
+/*
 class ComputationGraph {
 	private val logger = Logger[this.type]
 
@@ -260,3 +303,4 @@ class ComputationGraph {
 		}
 	}
 }
+*/

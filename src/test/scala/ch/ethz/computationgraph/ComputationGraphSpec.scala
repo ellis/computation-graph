@@ -5,7 +5,7 @@ import scala.reflect.runtime.universe.typeOf
 import scala.reflect.runtime.universe.TypeTag
 import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
-
+/*
 class ComputationGraphSpec extends FunSpec with GivenWhenThen {
 	
 	val call0 = Call(
@@ -48,4 +48,4 @@ class ComputationGraphSpec extends FunSpec with GivenWhenThen {
 		it("dependent functions should be automatically called") {
 		}
 	}
-}
+}*/

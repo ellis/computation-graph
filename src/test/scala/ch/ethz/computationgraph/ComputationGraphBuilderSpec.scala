@@ -11,7 +11,7 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 	val call0 = Call(
 		fn = (args: List[Object]) => {
 			List(
-				CallResultItem_Entity(typeOf[String], "output0", "Hello, World!")
+				CallResultItem_Entity("output0", "Hello, World!")
 			)
 		},
 		args = Nil
@@ -20,10 +20,10 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 	val call1 = Call(
 		fn = (args: List[Object]) => {
 			List(
-				CallResultItem_Entity(typeOf[String], "message", s"Hello, ${args.head}!")
+				CallResultItem_Entity("message", s"Hello, ${args.head}!")
 			)
 		},
-		args = Selector_Entity(typeOf[String], "name") :: Nil
+		args = Selector_Entity("name") :: Nil
 	)
 	
 	val t1 = List(1)
@@ -37,7 +37,7 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 			assert(x1.g.nodes.toNodeInSet === Set(CallNode(t1, call0)))
 		}
 		
-		it("call `call1` should ready once its input is available") {
+		it("call `call1` should be ready once its input is available") {
 			val x0 = X()
 			val x1 = x0.addCall(call1)
 			println(x1.g)
@@ -60,6 +60,9 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 			)
 			// The call should now be ready
 			assert(x2.timeToStatus(t1) === CallStatus.Ready)
+			
+			val x3 = x2.step()
+			println(x3.g)
 		}
 		
 		it("dependent functions should be automatically called") {
