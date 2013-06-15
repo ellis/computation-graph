@@ -1,5 +1,4 @@
 /*
-
 Copyright 2013 Ellis Whitehead
 
 This file is part of ComputationGraph.

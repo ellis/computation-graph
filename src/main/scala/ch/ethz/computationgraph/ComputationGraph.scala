@@ -57,7 +57,7 @@ object CallStatus extends Enumeration {
 
 case class X(
 	val g: Graph[GraphNode, UnDiEdge],
-	val db: EntityBase3,
+	val db: EntityBase,
 	val timeToCall: Map[List[Int], Call],
 	val timeToIdToEntity: SortedMap[List[Int], Map[String, Object]],
 	val timeToStatus: SortedMap[List[Int], CallStatus.Value]
@@ -163,7 +163,7 @@ case class X(
 	
 	private def calcCallStatus(
 		g: Graph[GraphNode, UnDiEdge],
-		db: EntityBase3,
+		db: EntityBase,
 		timeToCall: Map[List[Int], Call],
 		timeToIdToEntity: SortedMap[List[Int], Map[String, Object]],
 		timeToStatus: SortedMap[List[Int], CallStatus.Value]
@@ -235,7 +235,7 @@ case class X(
 
 object X {
 	def apply(): X =
-		new X(Graph(), new EntityBase3(Map(), Map(), SortedMap()(ListIntOrdering)), Map(), SortedMap()(ListIntOrdering), SortedMap()(ListIntOrdering))
+		new X(Graph(), new EntityBase(Map(), Map(), SortedMap()(ListIntOrdering)), Map(), SortedMap()(ListIntOrdering), SortedMap()(ListIntOrdering))
 }
 
 /*
