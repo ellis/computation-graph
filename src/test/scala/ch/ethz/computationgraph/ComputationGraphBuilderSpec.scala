@@ -26,11 +26,31 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 		args = Selector_Entity("name") :: Nil
 	)
 	
+	// toLowerCase
+	val call2 = Call(
+		fn = (args: List[Object]) => {
+			List(
+				CallResultItem_Entity("text", args.head.toString.toLowerCase)
+			)
+		},
+		args = Selector_Entity("text") :: Nil
+	)
+	
+	// reverse
+	val call3 = Call(
+		fn = (args: List[Object]) => {
+			List(
+				CallResultItem_Entity("text", args.head.toString.reverse)
+			)
+		},
+		args = Selector_Entity("text") :: Nil
+	)
+	
 	val t1 = List(1)
+	val t2 = List(2)
+	val t3 = List(3)
 	
 	describe("ComputationGraph") {
-		val tpeA = typeOf[ClassA]
-		
 		it("call `call0` should be placed in the graph at time 1") {
 			val x0 = X()
 			val x1 = x0.addCall(call0)
@@ -40,7 +60,7 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 		it("call `call1` should be ready once its input is available") {
 			val x0 = X()
 			val x1 = x0.addCall(call1)
-			println(x1.g)
+			//println(x1.g)
 			val cn1 = CallNode(t1, call1)
 			assert(x1.g.nodes.toNodeInSet ===
 				Set(
@@ -48,7 +68,7 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 					EntityNode("name")
 				)
 			)
-			assert(x1.timeToStatus(t1) === CallStatus.InputMissing)
+			assert(x1.timeToStatus(t1) === CallStatus.Waiting)
 			
 			// Set the input entity value to "World"
 			val x2 = x1.setImmutableEntity("name", "World")
@@ -60,10 +80,10 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 				)
 			)
 			// The call should now be ready
-			assert(x2.timeToStatus(t1) === CallStatus.InputReady)
+			assert(x2.timeToStatus(t1) === CallStatus.Ready)
 			
 			val x3 = x2.step()
-			println(x3.g)
+			//println(x3.g)
 			// Graph nodes be now also contain `message`
 			assert(x3.g.nodes.toNodeInSet ===
 				Set(
@@ -77,8 +97,67 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 			// The call should have succeeded
 			assert(x3.timeToStatus(t1) === CallStatus.Success)
 		}
-		
-		it("dependent functions should be automatically called") {
+	}
+	
+	describe("ComputationGraph to process text by two functions in sequence") {
+		it("should transform 'AbCdE' to 'edcba', then 'REVERSE' to 'esrever'") {
+			val x1 = X().addCall(call2).addCall(call3)
+			//println(x1.g)
+			val cn1 = CallNode(t1, call2)
+			val cn2 = CallNode(t2, call3)
+			assert(x1.g.nodes.toNodeInSet ===
+				Set(
+					cn1,
+					cn2,
+					EntityNode("text")
+				)
+			)
+			assert(x1.timeToStatus(t1) === CallStatus.Waiting)
+			assert(x1.timeToStatus(t2) === CallStatus.Waiting)
+			
+			val x2 = x1.setInitialState("text", "AbCdE")
+			assert(x2.timeToStatus(t1) === CallStatus.Ready)
+			assert(x2.timeToStatus(t2) === CallStatus.Waiting)
+			assert(x2.timeToIdToEntity(t1).get("text") === Some("AbCdE"))
+			assert(x2.timeToIdToEntity(t2).get("text") === None)
+			assert(x2.timeToIdToEntity(t3).get("text") === None)
+			
+			val x3 = x2.step()
+			//info(x3.toString)
+			assert(x3.timeToStatus(t1) === CallStatus.Success)
+			assert(x3.timeToStatus(t2) === CallStatus.Ready)
+			assert(x3.timeToIdToEntity(t1).get("text") === Some("AbCdE"))
+			assert(x3.timeToIdToEntity(t2).get("text") === Some("abcde"))
+			assert(x3.timeToIdToEntity(t3).get("text") === None)
+			
+			val x4 = x3.step()
+			//info(x4.toString)
+			assert(x4.timeToStatus(t1) === CallStatus.Success)
+			assert(x4.timeToStatus(t2) === CallStatus.Success)
+			assert(x4.timeToIdToEntity(t1).get("text") === Some("AbCdE"))
+			assert(x4.timeToIdToEntity(t2).get("text") === Some("abcde"))
+			assert(x4.timeToIdToEntity(t3).get("text") === Some("edcba"))
+			
+			val x5 = x4.setInitialState("text", "REVERSE")
+			assert(x5.timeToStatus(t1) === CallStatus.Ready)
+			assert(x5.timeToStatus(t2) === CallStatus.Success)
+			assert(x5.timeToIdToEntity(t1).get("text") === Some("REVERSE"))
+			assert(x5.timeToIdToEntity(t2).get("text") === Some("abcde"))
+			assert(x5.timeToIdToEntity(t3).get("text") === Some("edcba"))
+			
+			val x6 = x5.step()
+			assert(x6.timeToStatus(t1) === CallStatus.Success)
+			assert(x6.timeToStatus(t2) === CallStatus.Ready)
+			assert(x6.timeToIdToEntity(t1).get("text") === Some("REVERSE"))
+			assert(x6.timeToIdToEntity(t2).get("text") === Some("reverse"))
+			assert(x6.timeToIdToEntity(t3).get("text") === Some("edcba"))
+			
+			val x7 = x6.step()
+			assert(x7.timeToStatus(t1) === CallStatus.Success)
+			assert(x7.timeToStatus(t2) === CallStatus.Success)
+			assert(x7.timeToIdToEntity(t1).get("text") === Some("REVERSE"))
+			assert(x7.timeToIdToEntity(t2).get("text") === Some("reverse"))
+			assert(x7.timeToIdToEntity(t3).get("text") === Some("esrever"))
 		}
 	}
 }

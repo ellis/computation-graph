@@ -33,7 +33,7 @@ case class SelectorNode(clazz: Class[_]) extends GraphNode {
  * Next can be executed in the next step
  */
 object CallStatus extends Enumeration {
-	val Check, InputMissing, InputReady, Next, Success, Error = Value
+	val Check, Waiting, Ready, Success, Error = Value
 }
 
 case class X(
@@ -56,9 +56,6 @@ case class X(
 				val timeToIdToEntity2 = db2.getEntities
 				val timeToStatus1 = callStatusCheck(g2, time, id)
 				val timeToStatus2 = calcCallStatus(g2, db2, timeToCall, timeToIdToEntity2, timeToStatus1)
-				println("timeToStatus: "+timeToStatus)
-				println("timeToStatus1: "+timeToStatus1)
-				println("timeToStatus2: "+timeToStatus2)
 				new X(
 					g2,
 					db2,
@@ -126,13 +123,23 @@ case class X(
 		}
 	}
 	
+	/**
+	 * Change call status to CallStatus.Check for relevant nodes which depend on the entity with ID `id`.
+	 * The relevant nodes are those after time `time` and before the entity is set again by another call. 
+	 */
 	private def callStatusCheck(
 		g: Graph[GraphNode, UnDiEdge],
 		time: List[Int],
 		id: String
 	): SortedMap[List[Int], CallStatus.Value] = {
+		// List of times at which this entity is set after time `time`
+		val timesSet = g.get(EntityNode(id)).diPredecessors.toOuterNodes.collect({case n: CallNode if ListIntOrdering.compare(n.time, time) > 0 => n.time})
+		// Last time point we'll check
+		val last = if (timesSet.isEmpty) List(Int.MaxValue) else timesSet.min(ListIntOrdering)
+		// Call nodes which depend on the given entity
 		val callNodes = g.get(EntityNode(id)).diSuccessors.toOuterNodes.collect({case n: CallNode => n})
-		timeToStatus ++ callNodes.map(n => n.time -> CallStatus.Check)
+		val checks = callNodes.filter(n => ListIntOrdering.compare(n.time, time) > 0 && ListIntOrdering.compare(n.time, last) <= 0)
+		timeToStatus ++ checks.map(n => n.time -> CallStatus.Check)
 	}
 	
 	private def calcCallStatus(
@@ -155,7 +162,7 @@ case class X(
 						// check whether the database has values for them all
 						.forall(n => idToEntities.contains(n.id))
 					
-					if (ready) CallStatus.InputReady else CallStatus.InputMissing
+					if (ready) CallStatus.Ready else CallStatus.Waiting
 				}
 				else
 					status0
@@ -165,10 +172,10 @@ case class X(
 	}
 	
 	def step(): X = {
-		timeToStatus.toList.sortBy(_._1)(ListIntOrdering).foldLeft(this) { (acc0, pair) =>
+		timeToStatus.filter(_._2 == CallStatus.Ready).foldLeft(this) { (acc0, pair) =>
 			val (time, status) = pair
-			val call = timeToCall(time)
-			val idToEntity = timeToIdToEntity(time)
+			val call = acc0.timeToCall(time)
+			val idToEntity = acc0.timeToIdToEntity(time)
 			val args = call.args.map(_ match {
 				case s: Selector_Entity => idToEntity(s.id)
 				case s: Selector_List => s.ids.map(idToEntity)
@@ -176,7 +183,7 @@ case class X(
 			})
 			val results = call.fn(args)
 			// Set status of call to Success
-			val acc1 = acc0.copy(timeToStatus = timeToStatus + (time -> CallStatus.Success))
+			val acc1 = acc0.copy(timeToStatus = acc0.timeToStatus + (time -> CallStatus.Success))
 			// Add resulting commands
 			val commands = processCallResults(time, results)
 			val acc2 = commands.foldLeft(acc1) { (acc, cmd) => acc + cmd }
