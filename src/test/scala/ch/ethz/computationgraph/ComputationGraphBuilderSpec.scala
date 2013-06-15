@@ -44,6 +44,10 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 			println(x1.g)
 			println(x1.timeToIdToEntity)
 			println(x1.g.get(CallNode(t1)).incoming)
+			println(x1.g.get(CallNode(t1)).diPredecessors)
+			println(x1.g.get(CallNode(t1)).diPredecessors.map(_.getClass()))
+			println(x1.g.get(CallNode(t1)).diPredecessors.collect({
+							case n: EntityNode => n}))
 			assert(x1.timeToCall === Map(t1 -> call1))
 			assert(x1.timeToStatus(t1) === CallStatus.Waiting)
 			//cgb.db.storeEntity(typeOf[String], "name", List(0), "John")

@@ -113,9 +113,9 @@ case class X(
 				case Some(idToEntities) =>
 					val ready =
 						// Get entities required by the call node
-						g.get(CallNode(time)).incoming -- FIX THIS --.filter(_.isInstanceOf[EntityNode])
+						g.get(CallNode(time)).diPredecessors.toOuterNodes.collect({case n: EntityNode => n})
 						// check whether the database has values for them all
-						.forall(n => idToEntities.contains(n.asInstanceOf[EntityNode].id))
+						.forall(n => idToEntities.contains(n.id))
 					if (ready) CallStatus.Ready else CallStatus.Waiting
 			}
 			time -> status
