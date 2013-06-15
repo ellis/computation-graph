@@ -24,7 +24,7 @@ import scala.reflect.runtime.universe.TypeTag
 import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
 
-class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
+class ComputationGraphSpec extends FunSpec with GivenWhenThen {
 	
 	val call0 = Call(
 		fn = (args: List[Object]) => {
