@@ -13,12 +13,12 @@ import scalax.collection.GraphEdge._
 import scala.collection.SortedMap
 
 trait Command
-case class Command_SetEntity(tpe: Type, id: String, time: List[Int], entity: Object) extends Command
-case class Command_AddCall(call: Call, time: List[Int]) extends Command
+case class Command_SetEntity(time: List[Int], id: String, entity: Object) extends Command
+case class Command_AddCall(time: List[Int], call: Call) extends Command
 
 trait GraphNode
-case class CallNode(time: List[Int]) extends GraphNode {
-	override def toString = time.map(_ + 1).mkString(".")
+case class CallNode(time: List[Int], call: Call) extends GraphNode {
+	override def toString = time.mkString(".")
 }
 case class EntityNode(id: String) extends GraphNode {
 	override def toString = id
@@ -45,7 +45,7 @@ case class X(
 ) {
 	def +(cmd: Command): X = {
 		cmd match {
-			case Command_SetEntity(tpe, id, time, entity) =>
+			case Command_SetEntity(time, id, entity) =>
 				val g2 = g + EntityNode(id)
 				val db2 = db.setEntity(time, id, entity)
 				val timeToIdToEntity2 = db2.getEntities
@@ -57,8 +57,8 @@ case class X(
 					timeToIdToEntity2,
 					timeToStatus2
 				)
-			case Command_AddCall(call, time) =>
-				val g2 = g ++ addCall(call, time)
+			case Command_AddCall(time, call) =>
+				val g2 = g ++ addCall(time, call)
 				val db2 = db.registerCall(time, None)
 				val timeToCall2 = timeToCall + (time -> call)
 				val timeToIdToEntity2 = db2.getEntities
@@ -77,14 +77,22 @@ case class X(
 		val time =
 			if (timeToCall.isEmpty) List(1)
 			else List(timeToCall.keys.max(ListIntOrdering).head + 1)
-		this + Command_AddCall(call, time)
+		this + Command_AddCall(time, call)
+	}
+	
+	def setImmutableEntity(id: String, entity: Object): X = {
+		this + Command_SetEntity(Nil, id, entity)
+	}
+	
+	def setInitialState(id: String, entity: Object): X = {
+		this + Command_SetEntity(List(0), id, entity)
 	}
 
 	/**
 	 * When a call is added, its selectors are added to the selector/call graph
 	 */
-	private def addCall(call: Call, time: List[Int]): Graph[GraphNode, UnDiEdge] = {
-		val callNode = CallNode(time)
+	private def addCall(time: List[Int], call: Call): Graph[GraphNode, UnDiEdge] = {
+		val callNode = CallNode(time, call)
 		val g0 = Graph[GraphNode, UnDiEdge](callNode)
 		call.args.flatMap(selector => processSelector(callNode, selector)).foldLeft(g0)(_ + _)
 	}
@@ -107,13 +115,13 @@ case class X(
 		timeToIdToEntity: SortedMap[List[Int], Map[String, Object]]
 	): Map[List[Int], CallStatus.Value] = {
 		timeToCall.map(pair => {
-			val time = pair._1
+			val (time, call) = pair
 			val status = timeToIdToEntity.get(time) match {
 				case None => CallStatus.Waiting
 				case Some(idToEntities) =>
 					val ready =
 						// Get entities required by the call node
-						g.get(CallNode(time)).diPredecessors.toOuterNodes.collect({case n: EntityNode => n})
+						g.get(CallNode(time, call)).diPredecessors.toOuterNodes.collect({case n: EntityNode => n})
 						// check whether the database has values for them all
 						.forall(n => idToEntities.contains(n.id))
 					if (ready) CallStatus.Ready else CallStatus.Waiting

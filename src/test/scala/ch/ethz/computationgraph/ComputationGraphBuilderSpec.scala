@@ -31,26 +31,35 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 	describe("ComputationGraph") {
 		val tpeA = typeOf[ClassA]
 		
-		it("Call to `call0` should store output entity at next time step") {
+		it("call `call0` should be placed in the graph at time 1") {
 			val x0 = X()
 			val x1 = x0.addCall(call0)
-			println(x1.g)
-			assert(x1.timeToCall === Map(t1 -> call0))
+			assert(x1.g.nodes.toNodeInSet === Set(CallNode(t1, call0)))
 		}
 		
-		it("calls should only be invoked when all inputs are available") {
+		it("call `call1` should ready once its input is available") {
 			val x0 = X()
 			val x1 = x0.addCall(call1)
 			println(x1.g)
-			println(x1.timeToIdToEntity)
-			println(x1.g.get(CallNode(t1)).incoming)
-			println(x1.g.get(CallNode(t1)).diPredecessors)
-			println(x1.g.get(CallNode(t1)).diPredecessors.map(_.getClass()))
-			println(x1.g.get(CallNode(t1)).diPredecessors.collect({
-							case n: EntityNode => n}))
-			assert(x1.timeToCall === Map(t1 -> call1))
+			assert(x1.g.nodes.toNodeInSet ===
+				Set(
+					CallNode(t1, call1),
+					EntityNode("name")
+				)
+			)
 			assert(x1.timeToStatus(t1) === CallStatus.Waiting)
-			//cgb.db.storeEntity(typeOf[String], "name", List(0), "John")
+			
+			// Set the input entity value to "John"
+			val x2 = x1.setImmutableEntity("name", "John")
+			// Graph nodes should be unchanged
+			assert(x1.g.nodes.toNodeInSet ===
+				Set(
+					CallNode(t1, call1),
+					EntityNode("name")
+				)
+			)
+			// The call should now be ready
+			assert(x2.timeToStatus(t1) === CallStatus.Ready)
 		}
 		
 		it("dependent functions should be automatically called") {
