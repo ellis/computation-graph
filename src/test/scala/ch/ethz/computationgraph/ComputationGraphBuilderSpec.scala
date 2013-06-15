@@ -41,20 +41,21 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 			val x0 = X()
 			val x1 = x0.addCall(call1)
 			println(x1.g)
+			val cn1 = CallNode(t1, call1)
 			assert(x1.g.nodes.toNodeInSet ===
 				Set(
-					CallNode(t1, call1),
+					cn1,
 					EntityNode("name")
 				)
 			)
 			assert(x1.timeToStatus(t1) === CallStatus.Waiting)
 			
-			// Set the input entity value to "John"
-			val x2 = x1.setImmutableEntity("name", "John")
+			// Set the input entity value to "World"
+			val x2 = x1.setImmutableEntity("name", "World")
 			// Graph nodes should be unchanged
-			assert(x1.g.nodes.toNodeInSet ===
+			assert(x2.g.nodes.toNodeInSet ===
 				Set(
-					CallNode(t1, call1),
+					cn1,
 					EntityNode("name")
 				)
 			)
@@ -63,6 +64,18 @@ class ComputationGraphBuilderSpec extends FunSpec with GivenWhenThen {
 			
 			val x3 = x2.step()
 			println(x3.g)
+			// Graph nodes be now also contain `message`
+			assert(x3.g.nodes.toNodeInSet ===
+				Set(
+					cn1,
+					EntityNode("name"),
+					EntityNode("message")
+				)
+			)
+			assert(x3.db.getEntity(t1, "message") === None)
+			assert(x3.db.getEntity(List(2), "message") === Some("Hello, World!"))
+			// The call should have succeeded
+			assert(x2.timeToStatus(t1) === CallStatus.Success)
 		}
 		
 		it("dependent functions should be automatically called") {

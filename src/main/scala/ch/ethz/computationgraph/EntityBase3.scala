@@ -105,7 +105,10 @@ case class EntityBase3(
 			}
 			time -> (idToEntity ++ immutables)
 		})
-		SortedMap(m.toSeq : _*)(ListIntOrdering)
+		// The final time is a one-number list, whose value is higher than any calls in the database
+		val timeEnd = List(calls.keys.lastOption.getOrElse(List(0)).head + 1)
+		val end = timeEnd -> (next ++ immutables)
+		SortedMap((m + end).toSeq : _*)(ListIntOrdering)
 	}
 	
 	def getEntity(time: List[Int], id: String): Option[Object] = {
