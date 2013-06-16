@@ -3,25 +3,48 @@ package examples
 
 import scalafx.Includes._
 import scalafx.application.JFXApp
+import scalafx.geometry.Pos
 import scalafx.scene.Scene
+import scalafx.scene.control.CheckBox
+import scalafx.scene.control.Label
+import scalafx.scene.control.TextField
+import scalafx.scene.layout.VBox
 import scalafx.scene.shape.Rectangle
 import scalafx.stage.Stage
+import scalafx.scene.input.KeyEvent
 
 import javafx.scene.paint.Color
 
 object World extends JFXApp {
+  val name = new TextField
+  val yell = new CheckBox("Yell?")
+  val greeting = new Label {
+  	text <== name.text
+  }
+  name.onKeyPressed = (e: KeyEvent) => {
+  	println("event")
+  }
   stage = new JFXApp.PrimaryStage {
     title = "Hello World"
     width = 600
     height = 450
     scene = new Scene {
-      fill = Color.LIGHTGREEN
-      content = new Rectangle {
+      //fill = Color.LIGHTGREEN
+      /*content = new Rectangle {
         x = 25
         y = 40
         width = 100
         height = 100
         fill <== when(hover) then Color.GREEN otherwise Color.RED
+      }*/
+      content = new VBox {
+      	alignment = Pos.CENTER
+      	content = Seq(
+      		new Label("Name:"),
+      		name,
+      		yell,
+      		greeting
+      	)
       }
     }
   }
