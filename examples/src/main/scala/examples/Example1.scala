@@ -10,33 +10,35 @@ import scalafx.scene.control.Label
 import scalafx.scene.control.TextField
 import scalafx.scene.layout.VBox
 import scalafx.scene.shape.Rectangle
+import scalafx.scene.shape.Circle
 import scalafx.stage.Stage
 import scalafx.scene.input.KeyEvent
+import scalafx.beans.value.ObservableValue
 
 import javafx.scene.paint.Color
 
-object World extends JFXApp {
+object Example1 extends JFXApp {
   val name = new TextField
   val yell = new CheckBox("Yell?")
   val greeting = new Label {
-  	text <== name.text
+  	text <== when (yell.selected) then name.text + "!" otherwise name.text
   }
   name.onKeyPressed = (e: KeyEvent) => {
   	println("event")
+  	/*greeting.text = {
+	  	if (name.text.value.isEmpty)
+	  		""
+		else if (yell.selected.value)
+			"HELLO, " + name.text.value.toUpperCase() + "!"
+		else
+			"Hello, " + name.text.value + "."
+  	}*/
   }
   stage = new JFXApp.PrimaryStage {
     title = "Hello World"
     width = 600
     height = 450
     scene = new Scene {
-      //fill = Color.LIGHTGREEN
-      /*content = new Rectangle {
-        x = 25
-        y = 40
-        width = 100
-        height = 100
-        fill <== when(hover) then Color.GREEN otherwise Color.RED
-      }*/
       content = new VBox {
       	alignment = Pos.CENTER
       	content = Seq(

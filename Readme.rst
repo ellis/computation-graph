@@ -80,4 +80,4 @@ Related topics
 * Functional Reactive Programming (FRP)
 * AngularJS
 * Bret Victor - Learnable Programming (http://worrydream.com/LearnableProgramming/)
-
+* JavaFX/ScalaFX
