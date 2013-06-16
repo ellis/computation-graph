@@ -10,3 +10,6 @@
 - [ ] ComputationGraph: handle optional selectors
 - [ ] ComputaitonGraph: consider whether more information can be put in the graph rather than in extra maps
 - [ ] DSL
+- [ ] 
+
+Consider scalafx.CheckBoxTest
