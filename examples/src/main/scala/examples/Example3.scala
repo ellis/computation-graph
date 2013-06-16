@@ -28,7 +28,7 @@ object Example3 extends JFXApp {
 	}
 	val shapes = new HBox
 	stage = new JFXApp.PrimaryStage {
-		title = "Undo/Redo Example"
+		title = "Parameter Exploration"
 		width = 600
 		height = 450
 		scene = new Scene {
