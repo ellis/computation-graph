@@ -77,6 +77,8 @@ Enhancements
 Related topics
 --------------
 
+* Event sources (<http://martinfowler.com/eaaDev/EventSourcing.html>)
+* CQRS (<http://martinfowler.com/bliki/CQRS.html>)
 * Functional Reactive Programming (FRP)
 * AngularJS
 * Bret Victor - Learnable Programming (http://worrydream.com/LearnableProgramming/)
