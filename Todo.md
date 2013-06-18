@@ -3,8 +3,8 @@
 - [ ] Example: FRP: GUI Hello, World! (with textbox and checkbox)
 - [ ] Example: Undo: line of shapes
 - [ ] Example: Exploration: parameter changes for image transformations
+- [ ] Example: Visualize state of variable over time: lines on an image (Bret Victor exampl)
 - [ ] Example: Visualize computation state: GCD
-- [ ] Example: Visualize state of variable over time
 - [ ] ComputationGraph: remove node
 - [ ] ComputationGraph: remove entity
 - [ ] ComputationGraph: handle optional selectors
