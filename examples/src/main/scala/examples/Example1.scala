@@ -3,28 +3,62 @@ package examples
 
 import scalafx.Includes._
 import scalafx.application.JFXApp
+import scalafx.geometry.Insets
 import scalafx.geometry.Pos
 import scalafx.scene.Scene
 import scalafx.scene.control.CheckBox
 import scalafx.scene.control.Label
 import scalafx.scene.control.TextField
+import scalafx.scene.layout.GridPane
 import scalafx.scene.layout.VBox
 import scalafx.scene.shape.Rectangle
 import scalafx.scene.shape.Circle
 import scalafx.stage.Stage
+import scalafx.event.ActionEvent
 import scalafx.scene.input.KeyEvent
 import scalafx.beans.value.ObservableValue
+import scalafx.scene.paint.Color
 
-import javafx.scene.paint.Color
+import ch.ethz.computationgraph._
 
 object Example1 extends JFXApp {
+	val call1 = Call(
+		fn = (args: List[Object]) => {
+			val s0 = if (args.head.toString.isEmpty) "Hello" else s"Hello, ${args.head}"
+			val s1 = if (args(1).asInstanceOf[java.lang.Boolean]) s0.toUpperCase else s0
+			List(
+				CallResultItem_Entity("message", s1)
+			)
+		},
+		args = Selector_Entity("name") :: Selector_Entity("yell") :: Nil
+	)
+	val call2 = Call(
+		fn = (args: List[Object]) => {
+			List(
+				CallResultItem_Entity("color", (if (args.head.asInstanceOf[java.lang.Boolean]) Color.RED else Color.BLACK))
+			)
+		},
+		args = Selector_Entity("yell") :: Nil
+	)
+	var cg = ComputationGraph()
+	cg = cg.addCall(call1)
+	cg = cg.addCall(call2)
+	cg = cg.setImmutableEntity("name", "")
+	cg = cg.setImmutableEntity("yell", false.asInstanceOf[java.lang.Boolean])
+	cg = cg.step()
+
   val name = new TextField
-  val yell = new CheckBox("Yell?")
-  val greeting = new Label {
+  val yell = new CheckBox("")
+  val message = new Label/* {
   	text <== when (yell.selected) then name.text + "!" otherwise name.text
-  }
-  name.onKeyPressed = (e: KeyEvent) => {
+  }*/
+  name.onKeyReleased = (e: KeyEvent) => {
   	println("event")
+    cg = cg.setImmutableEntity("name", name.getText())
+    cg = cg.step()
+    println(cg)
+    val message_? = cg.db.getEntity(List(3), "message")
+    message.setText(message_?.getOrElse("").toString)
   	/*greeting.text = {
 	  	if (name.text.value.isEmpty)
 	  		""
@@ -34,19 +68,33 @@ object Example1 extends JFXApp {
 			"Hello, " + name.text.value + "."
   	}*/
   }
+  yell.onAction = (e: ActionEvent) => {
+  	println("event")
+  	val y = yell.selected.value
+    cg = cg.setImmutableEntity("yell", y.asInstanceOf[java.lang.Boolean])
+    cg = cg.step()
+    println(cg)
+    val message_? = cg.db.getEntity(List(3), "message").map(_.toString)
+    message.setText(message_?.getOrElse(""))
+    val color_? = cg.db.getEntity(List(3), "color").map(_.asInstanceOf[Color])
+    message.textFill = color_?.getOrElse(Color.BLACK)
+  }
   stage = new JFXApp.PrimaryStage {
-    title = "Hello World"
+    title = "Greetings"
     width = 600
     height = 450
     scene = new Scene {
-      content = new VBox {
+      content = new GridPane {
       	alignment = Pos.CENTER
-      	content = Seq(
-      		new Label("Name:"),
-      		name,
-      		yell,
-      		greeting
-      	)
+      	hgap = 10
+      	vgap = 10
+      	padding = Insets(25, 25, 25, 25)
+      	add(new Label("Name:"), 0, 0)
+      	add(name, 1, 0)
+      	add(new Label("Yell:"), 0, 1)
+      	add(yell, 1, 1)
+      	add(new Label("Message:"), 0, 2)
+      	add(message, 1, 2)
       }
     }
   }
