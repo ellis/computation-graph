@@ -1,73 +1,143 @@
+/*
+Copyright 2013 Ellis Whitehead
+
+This file is part of ComputationGraph.
+
+ComputationGraph is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+ComputationGraph is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with ComputationGraph.  If not, see <http://www.gnu.org/licenses/>
+*/
 package ch.ethz.computationgraph
 
 import scala.language.existentials
 import scala.language.implicitConversions
 import scala.language.postfixOps
-import scala.collection._
-import scala.collection.mutable.ArrayBuffer
-import scala.collection.mutable.HashMap
-import scala.collection.mutable.MultiMap
+import scala.collection.SortedMap
 import scala.math.Ordering
-import scala.reflect.runtime.{universe => ru}
-import scala.reflect.runtime.universe.Type
-import scala.reflect.runtime.universe.TypeTag
-import scala.reflect.runtime.universe.typeOf
-import scala.reflect.runtime.universe.typeTag
 import scala.util.Try
 import scalaz._
 import grizzled.slf4j.Logger
 
+case class EntityBaseCall(
+	includes_? : Option[Set[String]],
+	excludes_? : Option[Set[String]],
+	idToEntity_? : Option[Map[String, Object]]
+)
 
-class EntityBase {
-	private val logger = Logger[this.type]
+case class EntityBase(
+	immutables: Map[String, Object], 
+	initials: Map[String, Object], 
+	calls: SortedMap[List[Int], EntityBaseCall]
+) {
+	private val logger = Logger[EntityBase.this.type]
 
-	private implicit val listIntOrdering = ListIntOrdering
-	private val idToTimeToEntity_m = new HashMap[String, (Type, SortedMap[List[Int], Object])]
-
-	def contains(tpe: Type, id: String): Boolean = {
-		idToTimeToEntity_m.get(id) match {
-			case None => false
-			case Some((tpe0, timeToEntity_m0)) => tpe0 =:= tpe // FIXME: tpe0 can be a superclass of tpe
-		}
+	/**
+	 * @param constraints_? An optional list of IDs of entities which this call might modify.  If set to Some(Nil), then no entities will be modified.  If set to None, all entities may potentially be modified.
+	 */
+	def registerCall(time: List[Int], includes_? : Option[Iterable[String]]): EntityBase = {
+		val call = EntityBaseCall(includes_?.map(_.toSet), None, None)
+		new EntityBase(
+			immutables,			initials,			calls + (time -> call)
+		)
 	}
 	
-	def storeEntity(tpe: Type, id: String, time: List[Int], entity: Object) {
-		idToTimeToEntity_m.get(id) match {
-			case None =>
-				idToTimeToEntity_m(id) = (tpe, SortedMap(time -> entity))
-			case Some((tpe0, timeToEntity_m0)) =>
-				if (tpe0 != tpe)
-					logger.error(s"type mismatch for id `$id`")
-				else
-					idToTimeToEntity_m(id) = (tpe, timeToEntity_m0 + (time -> entity))
-		}
-	}
-	
-	def selectEntity(tpe: Type, id: String, time: List[Int], isOptional: Boolean = false): Option[Object] = {
-		idToTimeToEntity_m.get(id) match {
-			case None => None
-			case Some((tpe0, timeToEntity_m0)) =>
-				if (tpe0 != tpe) {
-					logger.error(s"type mismatch for id `${id}`")
-					None
+	def setEntities(time: List[Int], pairs: (String, Object)*): EntityBase = {
+		time match {
+			case Nil =>
+				new EntityBase(
+					immutables ++ pairs,
+					initials,
+					calls
+				)
+			case 0 :: Nil =>
+				new EntityBase(
+					immutables,
+					initials ++ pairs,
+					calls
+				)
+			case _ =>
+				calls.get(time) match {
+					case None =>
+						logger.error(s"tried to set entity on an unregistered call: time=$time")
+						EntityBase.this
+					case Some(call) =>
+						val call2 = call.copy(idToEntity_? = Some(call.idToEntity_?.getOrElse(Map()) ++ pairs))
+						new EntityBase(
+							immutables,
+							initials,
+							calls + (time -> call2)
+						)
 				}
-				else
-					entityAtOrBeforeTime(timeToEntity_m0, time)
 		}
 	}
-
-	def selectEntity(selector: Selector_Entity, time: List[Int]): Option[Object] =
-		selectEntity(selector.tpe, selector.id, time, selector.isOptional)
 	
-	private def entityAtOrBeforeTime(timeToEntity_m: SortedMap[List[Int], Object], time: List[Int]): Option[Object] = {
-		var entity_? : Option[Object] = None
-		for ((time0, entity0) <- timeToEntity_m) {
-			if (ListIntOrdering.compare(time0, time) <= 0)
-				entity_? = Some(entity0)
-			else
-				return entity_?
+	def setEntity(time: List[Int], id: String, entity: Object): EntityBase = {
+		time match {
+			case Nil =>
+				new EntityBase(
+					immutables + (id -> entity),
+					initials,
+					calls
+				)
+			case 0 :: Nil =>
+				new EntityBase(
+					immutables,
+					initials + (id -> entity),
+					calls
+				)
+			case _ =>
+				calls.get(time) match {
+					case None =>
+						logger.error(s"tried to set entity on an unregistered call: time=$time, id=$id")
+						EntityBase.this
+					case Some(call) =>
+						val call2 = call.copy(idToEntity_? = Some(call.idToEntity_?.getOrElse(Map()) + (id -> entity)))
+						new EntityBase(
+							immutables,
+							initials,
+							calls + (time -> call2)
+						)
+				}
 		}
-		entity_?
 	}
+	
+	def getEntities(): SortedMap[List[Int], Map[String, Object]] = {
+		var next = initials
+		val m = calls.map(pair => {
+			val (time, call) = pair
+			val idToEntity = next
+			next = call.idToEntity_? match {
+				case None => Map()
+				case Some(idToEntity) => next ++ idToEntity
+			}
+			time -> (idToEntity ++ immutables)
+		})
+		// The final time is a one-number list, whose value is higher than any calls in the database
+		val timeEnd = List(calls.keys.lastOption.getOrElse(List(0)).head + 1)
+		val end = timeEnd -> (next ++ immutables)
+		SortedMap((m + end).toSeq : _*)(ListIntOrdering)
+	}
+	
+	def getEntity(time: List[Int], id: String): Option[Object] = {
+		time match {
+			case Nil => immutables.get(id)
+			case List(0) => initials.get(id)
+			case _ =>
+				val timeToIdToEntity = getEntities()
+				timeToIdToEntity.get(time).flatMap(_.get(id))
+		}
+	}
+}
 
+object EntityBase {
+	val zero = new EntityBase(Map(), Map(), SortedMap()(ListIntOrdering)) 
 }

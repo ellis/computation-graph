@@ -1,8 +1,23 @@
+/*
+Copyright 2013 Ellis Whitehead
+
+This file is part of ComputationGraph.
+
+ComputationGraph is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+ComputationGraph is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with ComputationGraph.  If not, see <http://www.gnu.org/licenses/>
+*/
 package ch.ethz.computationgraph
 
-import scala.reflect.runtime.{universe => ru}
-import scala.reflect.runtime.universe.typeOf
-import scala.reflect.runtime.universe.TypeTag
 import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
 
@@ -10,23 +25,19 @@ private case class ClassA(s: String, n: Int)
 
 class EntityBaseSpec extends FunSpec with GivenWhenThen {
 	describe("DataBase") {
-		val tpeA = typeOf[ClassA]
-		
 		it("should read back the same entities as those stored, with time=Nil") {
-			val db = new EntityBase
 			val l = List[(String, ClassA)](
 				"1" -> ClassA("_", 0),
 				"2" -> ClassA("a", 1),
 				"3" -> ClassA("b", 2)
 			)
+			val db1 = EntityBase.zero.setEntities(Nil, l : _*)
+			println(db1)
 			for ((id, entity) <- l) {
-				db.storeEntity(typeOf[ClassA], id, Nil, entity)
-				val selector = Selector_Entity(typeOf[ClassA], id)
-				val jsval2_? = db.selectEntity(selector, Nil)
-				assert(jsval2_? === Some(entity))
+				assert(db1.getEntity(Nil, id) === Some(entity))
 			}
 		}
-		
+		/*
 		it("should read back equivalent entities as those stored with time != Nil") {
 			val db = new EntityBase
 			val jsval0 = ClassA("_", 0)
@@ -89,6 +100,7 @@ class EntityBaseSpec extends FunSpec with GivenWhenThen {
 			assert(db.selectEntity(selector, time1123) === Some(jsval2))
 			assert(db.selectEntity(selector, time1124) === Some(jsval2))
 		}
+		*/
 		/*
 		it("should read back all entities in table with getAll()") {
 			val jsvalA = JsObject("s" -> JsString("a"), "n" -> JsNumber(1))

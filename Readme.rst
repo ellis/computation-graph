@@ -47,10 +47,26 @@ Missing data
 
 When data is missing, defaults can be supplied by special functions.
 
+Use cases
+---------
+
+* Functional Reactive Programming
+* Undo/redo
+* Exploration of parameter variations
+* Visualizing
+
+  * code execution
+  * simulation over time
+  * computation state
+
+* Optimization (interactive or automated)
+
 Demonstration
 -------------
 
 * Typical GUI example of typing text and fetching data
+* Undo/redo
+* Tracking alternate paths
 * Example of tracing changes to an image (e.g. example from "Make flow tangible" at Bret Victor, Learnable Programming)
 
 Enhancements
@@ -61,7 +77,9 @@ Enhancements
 Related topics
 --------------
 
+* Event sources (<http://martinfowler.com/eaaDev/EventSourcing.html>)
+* CQRS (<http://martinfowler.com/bliki/CQRS.html>)
 * Functional Reactive Programming (FRP)
 * AngularJS
 * Bret Victor - Learnable Programming (http://worrydream.com/LearnableProgramming/)
-
+* JavaFX/ScalaFX

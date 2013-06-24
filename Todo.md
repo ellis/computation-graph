@@ -1,0 +1,15 @@
+- [ ] ComputationGraph: remove callnode children when its marked as Ready or Waiting
+- [ ] ComputationGraph: `run` method
+- [ ] Example: FRP: GUI Hello, World! (with textbox and checkbox)
+- [ ] Example: Undo: line of shapes
+- [ ] Example: Exploration: parameter changes for image transformations
+- [ ] Example: Visualize state of variable over time: lines on an image (Bret Victor exampl)
+- [ ] Example: Visualize computation state: GCD
+- [ ] ComputationGraph: remove node
+- [ ] ComputationGraph: remove entity
+- [ ] ComputationGraph: handle optional selectors
+- [ ] ComputaitonGraph: consider whether more information can be put in the graph rather than in extra maps
+- [ ] DSL
+- [ ] 
+
+Consider scalafx.CheckBoxTest
