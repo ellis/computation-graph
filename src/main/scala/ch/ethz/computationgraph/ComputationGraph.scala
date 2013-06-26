@@ -62,6 +62,16 @@ case class ComputationGraph(
 	val timeToIdToEntity: SortedMap[List[Int], Map[String, Object]],
 	val timeToStatus: SortedMap[List[Int], CallStatus.Value]
 ) {
+	override def toString = {
+		s"ComputationGraph(\n\t$g\n" +
+			timeToCall.map(pair => {
+				val time = pair._1
+				val s = time.mkString(".")
+				s"\t$s status: ${timeToStatus(time)}" +
+					timeToIdToEntity(time).map(pair => s"\t\t${pair._1} = ${pair._2}").mkString("\n", "\n", "")
+			}).mkString("\n") + ")"
+	}
+	
 	def +(cmd: Command): ComputationGraph = {
 		cmd match {
 			case Command_SetEntity(time, id, entity) =>

@@ -46,7 +46,9 @@ case class EntityBase(
 	def registerCall(time: List[Int], includes_? : Option[Iterable[String]]): EntityBase = {
 		val call = EntityBaseCall(includes_?.map(_.toSet), None, None)
 		new EntityBase(
-			immutables,			initials,			calls + (time -> call)
+			immutables,
+			initials,
+			calls + (time -> call)
 		)
 	}
 	

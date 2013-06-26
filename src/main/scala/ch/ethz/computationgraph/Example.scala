@@ -65,4 +65,32 @@ class Example {
 		}
 		CallResultItem_Call(Call(fn, selectors))
 	}
+	
+	
+}
+
+object Example {
+	def main(args: Array[String]) {
+		val e = new Example
+		val call = Call(
+			fn = (inputs: List[Object]) => {
+				e.x()
+			},
+			args = Nil
+		)
+		var cg = ComputationGraph()
+		cg = cg.addCall(call)
+		println(cg)
+		println()
+		cg = cg.step()
+		cg = cg.setInitialState(e.A.id, ContainerState(20)).setInitialState(e.B.id, ContainerState(0))
+		println(cg)
+		println()
+		for (i <- 0 to 5) {
+			cg = cg.step()
+			println("cg:")
+			println(cg)
+			println()
+		}
+	}
 }
