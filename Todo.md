@@ -1,15 +1,14 @@
 - [ ] ComputationGraph: remove callnode children when its marked as Ready or Waiting
 - [ ] ComputationGraph: `run` method
-- [ ] Example: FRP: GUI Hello, World! (with textbox and checkbox)
-- [ ] Example: Undo: line of shapes
-- [ ] Example: Exploration: parameter changes for image transformations
-- [ ] Example: Visualize state of variable over time: lines on an image (Bret Victor exampl)
-- [ ] Example: Visualize computation state: GCD
+- [ ] Example: robot pipetting liquid
 - [ ] ComputationGraph: remove node
 - [ ] ComputationGraph: remove entity
 - [ ] ComputationGraph: handle optional selectors
 - [ ] ComputaitonGraph: consider whether more information can be put in the graph rather than in extra maps
 - [ ] DSL
-- [ ] 
-
-Consider scalafx.CheckBoxTest
+- [ ] ComputationGraph: needs a result monad for errors and warnings
+- [ ] ReactiveSim: handles ComputationGraph and modifications
+- [ ] ReactiveSim: handle commands, events, and measurements
+- [ ] New terminology: immutable entity -> parameter
+- [ ] ReactiveSim: create function to run until measurement required
+- [ ] Create visual representation of ComputationGraph

@@ -63,6 +63,11 @@ case class ComputationGraph(
 	val timeToIdToEntity: SortedMap[List[Int], Map[String, Object]],
 	val timeToStatus: SortedMap[List[Int], CallStatus.Value]
 ) {
+	val isNextReady = timeToStatus.dropWhile(_._2 == CallStatus.Success).headOption match {
+		case Some((time, status)) if status == CallStatus.Ready => true
+		case _ => false
+	}
+	
 	override def toString = {
 		s"ComputationGraph(\n\t$g\n\t$db\n" +
 			timeToCall.map(pair => {
@@ -212,24 +217,52 @@ case class ComputationGraph(
 		}).toSeq : _*)(ListIntOrdering)
 	}
 	
-	def step(): ComputationGraph = {
+	def stepNext(): Option[ComputationGraph] = {
+		timeToStatus.dropWhile(_._2 == CallStatus.Success).headOption match {
+			case Some((time, status)) if status == CallStatus.Ready =>
+				Some(stepOne(time))
+			case _ => None
+		}
+	}
+	
+	def stepOne(): Option[ComputationGraph] = {
+		timeToStatus.filter(_._2 == CallStatus.Ready).headOption match {
+			case Some((time, _)) => Some(stepOne(time))
+			case _ => None
+		}
+	}
+	
+	def stepAllReady(): ComputationGraph = {
 		timeToStatus.filter(_._2 == CallStatus.Ready).foldLeft(this) { (acc0, pair) =>
 			val (time, status) = pair
-			val call = acc0.timeToCall(time)
-			val idToEntity = acc0.timeToIdToEntity(time)
-			val args = call.args.map(_ match {
-				case s: Selector_Entity => idToEntity(s.id)
-				case s: Selector_List => s.ids.map(idToEntity)
-				case s: Selector_All => Nil // FIXME: add handling for Selector_ALL
-			})
-			val results = call.fn(args)
-			// Set status of call to Success
-			val acc1 = acc0.copy(timeToStatus = acc0.timeToStatus + (time -> CallStatus.Success))
-			// Add resulting commands
-			val commands = Command_ClearEntities(time) :: processCallResults(time, results)
-			val acc2 = commands.foldLeft(acc1) { (acc, cmd) => acc + cmd }
-			acc2
+			acc0.stepOne(time)
 		}
+	}
+	
+	def run(): ComputationGraph = {
+		var cg = this
+		do {
+			cg = cg.stepAllReady()
+		} while (!cg.timeToStatus.filter(_._2 == CallStatus.Ready).isEmpty)
+		cg
+	}
+	
+	private def stepOne(time: List[Int]): ComputationGraph = {
+		val acc0 = this
+		val call = acc0.timeToCall(time)
+		val idToEntity = acc0.timeToIdToEntity(time)
+		val args = call.args.map(_ match {
+			case s: Selector_Entity => idToEntity(s.id)
+			case s: Selector_List => s.ids.map(idToEntity)
+			case s: Selector_All => Nil // FIXME: add handling for Selector_ALL
+		})
+		val results = call.fn(args)
+		// Set status of call to Success
+		val acc1 = acc0.copy(timeToStatus = acc0.timeToStatus + (time -> CallStatus.Success))
+		// Add resulting commands
+		val commands = Command_ClearEntities(time) :: processCallResults(time, results)
+		val acc2 = commands.foldLeft(acc1) { (acc, cmd) => acc + cmd }
+		acc2
 	}
 	
 	private def processCallResults(time: List[Int], results: List[CallResultItem]): List[Command] = {

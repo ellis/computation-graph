@@ -54,7 +54,7 @@ class Example {
 	def check(index: Int, target: Double): CallResultItem = {
 		val selectors = List[Selector](Selector_Entity(s"measurement$index"))
 		val fn = (inputs: List[Object]) => {
-			val measurement = inputs(0).asInstanceOf[Double]
+			val measurement = inputs(0).asInstanceOf[java.lang.Double]
 			val f = measurement / target
 			if (f > 1.1)
 				exec(AlertUser("Threshold exceeded")) :: Nil
@@ -79,18 +79,22 @@ object Example {
 			args = Nil
 		)
 		var cg = ComputationGraph()
-		cg = cg.addCall(call)
+			.addCall(call)
+			.setInitialState(e.A.id, ContainerState(20))
+			.setInitialState(e.B.id, ContainerState(0))
 		println(cg)
 		println()
-		cg = cg.step()
-		cg = cg.setInitialState(e.A.id, ContainerState(20)).setInitialState(e.B.id, ContainerState(0))
+		
+		cg = cg.run()
+		println("cg:")
 		println(cg)
 		println()
-		for (i <- 0 to 5) {
-			cg = cg.step()
-			println("cg:")
-			println(cg)
-			println()
-		}
+		
+		cg = cg.setInitialState("measurement0", 8.0: java.lang.Double)
+		
+		cg = cg.run()
+		println("cg:")
+		println(cg)
+		println()
 	}
 }
