@@ -31,6 +31,7 @@ import scalax.collection.GraphEdge._
 import scala.collection.SortedMap
 
 trait Command
+case class Command_ClearEntities(time: List[Int]) extends Command
 case class Command_SetEntity(time: List[Int], id: String, entity: Object) extends Command
 case class Command_AddCall(time: List[Int], call: Call) extends Command
 
@@ -63,7 +64,7 @@ case class ComputationGraph(
 	val timeToStatus: SortedMap[List[Int], CallStatus.Value]
 ) {
 	override def toString = {
-		s"ComputationGraph(\n\t$g\n" +
+		s"ComputationGraph(\n\t$g\n\t$db\n" +
 			timeToCall.map(pair => {
 				val time = pair._1
 				val s = time.mkString(".")
@@ -74,6 +75,17 @@ case class ComputationGraph(
 	
 	def +(cmd: Command): ComputationGraph = {
 		cmd match {
+			case Command_ClearEntities(time) =>
+				val db2 = db.clearEntities(time)
+				val timeToIdToEntity2 = db2.getEntities
+				val timeToStatus2 = calcCallStatus(g, db2, timeToCall, timeToIdToEntity2, timeToStatus)
+				new ComputationGraph(
+					g,
+					db2,
+					timeToCall,
+					timeToIdToEntity2,
+					timeToStatus2
+				)
 			case Command_SetEntity(time, id, entity) =>
 				val g2 = {
 					if (ListIntOrdering.compare(time, List(0)) <= 0)
@@ -214,7 +226,7 @@ case class ComputationGraph(
 			// Set status of call to Success
 			val acc1 = acc0.copy(timeToStatus = acc0.timeToStatus + (time -> CallStatus.Success))
 			// Add resulting commands
-			val commands = processCallResults(time, results)
+			val commands = Command_ClearEntities(time) :: processCallResults(time, results)
 			val acc2 = commands.foldLeft(acc1) { (acc, cmd) => acc + cmd }
 			acc2
 		}

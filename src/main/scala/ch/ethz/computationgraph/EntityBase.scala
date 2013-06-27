@@ -52,6 +52,36 @@ case class EntityBase(
 		)
 	}
 	
+	def clearEntities(time: List[Int]): EntityBase = {
+		time match {
+			case Nil =>
+				new EntityBase(
+					Map(),
+					initials,
+					calls
+				)
+			case 0 :: Nil =>
+				new EntityBase(
+					immutables,
+					Map(),
+					calls
+				)
+			case _ =>
+				calls.get(time) match {
+					case None =>
+						logger.error(s"tried to set entity on an unregistered call: time=$time")
+						EntityBase.this
+					case Some(call) =>
+						val call2 = call.copy(idToEntity_? = Some(Map()))
+						new EntityBase(
+							immutables,
+							initials,
+							calls + (time -> call2)
+						)
+				}
+		}
+	}
+	
 	def setEntities(time: List[Int], pairs: (String, Object)*): EntityBase = {
 		time match {
 			case Nil =>
