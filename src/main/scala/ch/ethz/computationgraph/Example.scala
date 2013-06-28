@@ -96,5 +96,12 @@ object Example {
 		println("cg:")
 		println(cg)
 		println()
+		
+		cg = cg.setInitialState("measurement1", 10.0: java.lang.Double)
+		
+		cg = cg.run()
+		println("cg:")
+		println(cg)
+		println()
 	}
 }

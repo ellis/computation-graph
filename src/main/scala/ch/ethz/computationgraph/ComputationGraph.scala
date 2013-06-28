@@ -59,7 +59,7 @@ object CallStatus extends Enumeration {
 case class ComputationGraph(
 	val g: Graph[GraphNode, UnDiEdge],
 	val db: EntityBase,
-	val timeToCall: Map[List[Int], Call],
+	val timeToCall: SortedMap[List[Int], Call],
 	val timeToIdToEntity: SortedMap[List[Int], Map[String, Object]],
 	val timeToStatus: SortedMap[List[Int], CallStatus.Value]
 ) {
@@ -191,7 +191,7 @@ case class ComputationGraph(
 	private def calcCallStatus(
 		g: Graph[GraphNode, UnDiEdge],
 		db: EntityBase,
-		timeToCall: Map[List[Int], Call],
+		timeToCall: SortedMap[List[Int], Call],
 		timeToIdToEntity: SortedMap[List[Int], Map[String, Object]],
 		timeToStatus: SortedMap[List[Int], CallStatus.Value]
 	): SortedMap[List[Int], CallStatus.Value] = {
@@ -257,8 +257,16 @@ case class ComputationGraph(
 			case s: Selector_All => Nil // FIXME: add handling for Selector_ALL
 		})
 		val results = call.fn(args)
+		
+		val timeToStatus1 = acc0.timeToStatus + (time -> CallStatus.Success)
+		// Check the next call now, if it was waiting
+		val timeToStatus2 = timeToStatus1.keys.dropWhile(t => ListIntOrdering.compare(t, time) <= 0).headOption match {
+			case Some(timeNext) if timeToStatus1(timeNext) == CallStatus.Waiting => timeToStatus1 + (timeNext -> CallStatus.Check)
+			case None => timeToStatus1
+		}
+		
 		// Set status of call to Success
-		val acc1 = acc0.copy(timeToStatus = acc0.timeToStatus + (time -> CallStatus.Success))
+		val acc1 = acc0.copy(timeToStatus = timeToStatus2)
 		// Add resulting commands
 		val commands = Command_ClearEntities(time) :: processCallResults(time, results)
 		val acc2 = commands.foldLeft(acc1) { (acc, cmd) => acc + cmd }
@@ -290,5 +298,5 @@ case class ComputationGraph(
 
 object ComputationGraph {
 	def apply(): ComputationGraph =
-		new ComputationGraph(Graph(), new EntityBase(Map(), Map(), SortedMap()(ListIntOrdering)), Map(), SortedMap()(ListIntOrdering), SortedMap()(ListIntOrdering))
+		new ComputationGraph(Graph(), new EntityBase(Map(), Map(), SortedMap()(ListIntOrdering)), SortedMap()(ListIntOrdering), SortedMap()(ListIntOrdering), SortedMap()(ListIntOrdering))
 }
