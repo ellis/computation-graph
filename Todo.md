@@ -12,3 +12,21 @@
 - [ ] New terminology: immutable entity -> parameter
 - [ ] ReactiveSim: create function to run until measurement required
 - [ ] Create visual representation of ComputationGraph
+
+Robot:
+
+Actions and percepts are discrete events that happen at pre-determined
+times.
+
+Time-based simulations may have new percepts coming in at any time
+as signals.
+
+Some data entities are calculated, so they update at any time step
+where the inputs change.
+
+Some calculations require history data, so not just the current value.
+
+ACTIONS
+DATA
+CALCULATIONS
+MEASUREMENTS
