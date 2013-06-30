@@ -19,11 +19,14 @@ case class Lookup_All[A : Manifest]() extends Lookup[List[A]] {
 	val selector = Selector_All(manifest[A].erasure)
 }
 
+//sealed trait OutputItem
+//case class OutputItem_
+
 class Example2 {
 	val A = Container("A")
 	val B = Container("B")
 	
-	def lookup()(fn: Unit => List[CallResultItem]): Call = {
+	def input()(fn: Unit => List[CallResultItem]): Call = {
 		Call(
 			fn = (inputs: List[Object]) => {
 				fn()
@@ -32,7 +35,7 @@ class Example2 {
 		)
 	}
 	
-	def lookup[A](a: Lookup[A])(fn: (A) => List[CallResultItem]): Call = {
+	def input[A](a: Lookup[A])(fn: (A) => List[CallResultItem]): Call = {
 		Call(
 			fn = (inputs: List[Object]) => {
 				val a1 = inputs(0).asInstanceOf[A]
@@ -44,17 +47,21 @@ class Example2 {
 	
 	def as[A : Manifest](id: String): Lookup_Entity[A] = Lookup_Entity[A](id)
 	
+	def output(items: CallResultItem*): List[CallResultItem] = List(items)
+	
+	implicit def pairToResultEntity(pair: (String, Object)) = CallResultItem_Entity(pair._1, pair._2)
+	
 	def exec(command: RobotCommand): CallResultItem_Call = {
 		val call = command match {
 			case Aspirate(volume, container) =>
-				lookup (as[ContainerState](container.id)) {
+				input (as[ContainerState](container.id)) {
 					(state) =>
-					List[CallResultItem](CallResultItem_Entity(container.id, state.copy(volume = state.volume - volume)))
+					output(container.id -> state.copy(volume = state.volume - volume))
 				}
 			case Dispense(volume, container) =>
-				lookup (as[ContainerState](container.id)) {
+				input (as[ContainerState](container.id)) {
 					(state) =>
-					List[CallResultItem](CallResultItem_Entity(container.id, state.copy(volume = state.volume + volume)))
+					output(container.id -> state.copy(volume = state.volume + volume))
 				}
 			case Measure(container) =>
 				val selectors = List[Selector](Selector_Entity(container.id))
