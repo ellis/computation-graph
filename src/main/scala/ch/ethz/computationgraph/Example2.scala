@@ -50,9 +50,10 @@ class Example2 {
 	def output(items: CallResultItem*): List[CallResultItem] = items.toList
 	
 	implicit def pairToResultEntity(pair: (String, Object)) = CallResultItem_Entity(pair._1, pair._2)
+	implicit def callToResult(call: Call) = CallResultItem_Call(call)
 	
-	def exec(command: RobotCommand): CallResultItem_Call = {
-		val call = command match {
+	def exec(command: RobotCommand): Call = {
+		command match {
 			case Aspirate(volume, container) =>
 				input (as[ContainerState](container.id)) {
 					(state) =>
@@ -71,30 +72,31 @@ class Example2 {
 				}
 				Call(fn, selectors)
 		}
-		CallResultItem_Call(call)
 	}
 	
 	def x(): List[CallResultItem] = x(0, 10)
 	
 	def x(index: Int, volume: Double): List[CallResultItem] = {
-		exec(Aspirate(volume, A)) :: exec(Dispense(volume, B)) :: exec(Measure(B)) :: check(index, 10) :: Nil
+		output(
+			exec(Aspirate(volume, A)),
+			exec(Dispense(volume, B)),
+			exec(Measure(B)),
+			check(index, 10)
+		)
 	}
 	
-	def check(index: Int, target: Double): CallResultItem = {
-		val selectors = List[Selector](Selector_Entity(s"measurement$index"))
-		val fn = (inputs: List[Object]) => {
-			val measurement = inputs(0).asInstanceOf[java.lang.Double]
+	def check(index: Int, target: Double): Call = {
+		input(as[java.lang.Double](s"measurement$index")) {
+			(measurement) =>
 			val f = measurement / target
 			if (f > 1.1)
-				exec(AlertUser("Threshold exceeded")) :: Nil
+				output(exec(AlertUser("Threshold exceeded")))
 			else if (f < 0.9)
 				x(index + 1, target - measurement)
 			else
 				Nil
 		}
-		CallResultItem_Call(Call(fn, selectors))
 	}
-	
 	
 }
 
