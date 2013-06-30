@@ -47,7 +47,7 @@ class Example2 {
 	
 	def as[A : Manifest](id: String): Lookup_Entity[A] = Lookup_Entity[A](id)
 	
-	def output(items: CallResultItem*): List[CallResultItem] = List(items)
+	def output(items: CallResultItem*): List[CallResultItem] = items.toList
 	
 	implicit def pairToResultEntity(pair: (String, Object)) = CallResultItem_Entity(pair._1, pair._2)
 	
