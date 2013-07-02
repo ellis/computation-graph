@@ -12,4 +12,8 @@ class ReactiveSim {
 	def setInitialState(id: String, entity: Object) {
 		cg = cg.setInitialState(id, entity)
 	}
+	
+	def run() {
+		cg = cg.run()
+	}
 }

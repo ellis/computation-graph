@@ -103,37 +103,32 @@ class Example2 {
 
 object Example2 {
 	def main(args: Array[String]) {
+		val rs = new ReactiveSim
 		val e = new Example2
-		val call = Call(
-			fn = (inputs: List[Object]) => {
-				e.x()
-			},
-			selectors = Nil
-		)
-		var cg = ComputationGraph()
-			.addCall(call)
-			.setInitialState(e.A.id, ContainerState(20))
-			.setInitialState(e.B.id, ContainerState(0))
-		println(cg)
+		val calls: List[Call] = e.x().getOrElse(Nil).collect({case CallResultItem_Call(call) => call})
+		calls.foreach(rs.addCall)
+		rs.setInitialState(e.A.id, ContainerState(20))
+		rs.setInitialState(e.B.id, ContainerState(0))
+		println(rs.graph)
 		println()
 		
-		cg = cg.run()
+		rs.run()
 		println("cg:")
-		println(cg)
+		println(rs.graph)
 		println()
 		
-		cg = cg.setInitialState("measurement0", 8.0: java.lang.Double)
+		rs.setInitialState("measurement0", 8.0: java.lang.Double)
 		
-		cg = cg.run()
+		rs.run()
 		println("cg:")
-		println(cg)
+		println(rs.graph)
 		println()
 		
-		cg = cg.setInitialState("measurement1", 10.0: java.lang.Double)
+		rs.setInitialState("measurement1", 10.0: java.lang.Double)
 		
-		cg = cg.run()
+		rs.run()
 		println("cg:")
-		println(cg)
+		println(rs.graph)
 		println()
 	}
 }

@@ -23,7 +23,7 @@ import scala.reflect.runtime.universe.Type
 
 case class Call(fn: List[Object] => RsResult[List[CallResultItem]], selectors: List[Selector])
 
-trait CallResultItem
+sealed trait CallResultItem
 case class CallResultItem_Entity(id: String, entity: Object) extends CallResultItem
 case class CallResultItem_Event(id: String, fn: Object => Object) extends CallResultItem
 case class CallResultItem_Call(call: Call) extends CallResultItem
