@@ -1,7 +1,7 @@
 package ch.ethz.computationgraph
 
 import scala.reflect.Manifest
-
+/*
 class Example3 {
 	val A = Container("A")
 	val B = Container("B")
@@ -122,3 +122,4 @@ object Example3 {
 		println()
 	}
 }
+*/
