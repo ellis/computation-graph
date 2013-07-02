@@ -16,7 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ComputationGraph.  If not, see <http://www.gnu.org/licenses/>
 */
-package ch.ethz.computationgraph
+package ch.ethz.reactivesim
 
 import scala.reflect.runtime.{universe => ru}
 import scala.reflect.runtime.universe.typeOf
@@ -24,46 +24,44 @@ import scala.reflect.runtime.universe.TypeTag
 import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
 
-import ch.ethz.reactivesim.CallStatus;
-
 class ComputationGraphSpec extends FunSpec with GivenWhenThen {
 	
 	val call0 = Call(
 		fn = (args: List[Object]) => {
-			List(
+			RsSuccess(List(
 				CallResultItem_Entity("output0", "Hello, World!")
-			)
+			))
 		},
-		args = Nil
+		selectors = Nil
 	)
 	
 	val call1 = Call(
 		fn = (args: List[Object]) => {
-			List(
+			RsSuccess(List(
 				CallResultItem_Entity("message", s"Hello, ${args.head}!")
-			)
+			))
 		},
-		args = Selector_Entity("name") :: Nil
+		selectors = Selector_Entity("name") :: Nil
 	)
 	
 	// toLowerCase
 	val call2 = Call(
 		fn = (args: List[Object]) => {
-			List(
+			RsSuccess(List(
 				CallResultItem_Entity("text", args.head.toString.toLowerCase)
-			)
+			))
 		},
-		args = Selector_Entity("text") :: Nil
+		selectors = Selector_Entity("text") :: Nil
 	)
 	
 	// reverse
 	val call3 = Call(
 		fn = (args: List[Object]) => {
-			List(
+			RsSuccess(List(
 				CallResultItem_Entity("text", args.head.toString.reverse)
-			)
+			))
 		},
-		args = Selector_Entity("text") :: Nil
+		selectors = Selector_Entity("text") :: Nil
 	)
 	
 	val t1 = List(1)
@@ -102,7 +100,7 @@ class ComputationGraphSpec extends FunSpec with GivenWhenThen {
 			// The call should now be ready
 			assert(x2.timeToStatus(t1) === CallStatus.Ready)
 			
-			val x3 = x2.step()
+			val x3 = x2.stepNext().get
 			//println(x3.g)
 			// Graph nodes be now also contain `message`
 			assert(x3.g.nodes.toNodeInSet ===
@@ -142,7 +140,7 @@ class ComputationGraphSpec extends FunSpec with GivenWhenThen {
 			assert(x2.timeToIdToEntity(t2).get("text") === None)
 			assert(x2.timeToIdToEntity(t3).get("text") === None)
 			
-			val x3 = x2.step()
+			val x3 = x2.stepNext().get
 			//info(x3.toString)
 			assert(x3.timeToStatus(t1) === CallStatus.Success)
 			assert(x3.timeToStatus(t2) === CallStatus.Ready)
@@ -150,7 +148,7 @@ class ComputationGraphSpec extends FunSpec with GivenWhenThen {
 			assert(x3.timeToIdToEntity(t2).get("text") === Some("abcde"))
 			assert(x3.timeToIdToEntity(t3).get("text") === None)
 			
-			val x4 = x3.step()
+			val x4 = x3.stepNext().get
 			//info(x4.toString)
 			assert(x4.timeToStatus(t1) === CallStatus.Success)
 			assert(x4.timeToStatus(t2) === CallStatus.Success)
@@ -165,14 +163,14 @@ class ComputationGraphSpec extends FunSpec with GivenWhenThen {
 			assert(x5.timeToIdToEntity(t2).get("text") === Some("abcde"))
 			assert(x5.timeToIdToEntity(t3).get("text") === Some("edcba"))
 			
-			val x6 = x5.step()
+			val x6 = x5.stepNext().get
 			assert(x6.timeToStatus(t1) === CallStatus.Success)
 			assert(x6.timeToStatus(t2) === CallStatus.Ready)
 			assert(x6.timeToIdToEntity(t1).get("text") === Some("REVERSE"))
 			assert(x6.timeToIdToEntity(t2).get("text") === Some("reverse"))
 			assert(x6.timeToIdToEntity(t3).get("text") === Some("edcba"))
 			
-			val x7 = x6.step()
+			val x7 = x6.stepNext().get
 			assert(x7.timeToStatus(t1) === CallStatus.Success)
 			assert(x7.timeToStatus(t2) === CallStatus.Success)
 			assert(x7.timeToIdToEntity(t1).get("text") === Some("REVERSE"))

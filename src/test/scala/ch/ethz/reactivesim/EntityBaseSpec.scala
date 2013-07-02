@@ -16,12 +16,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ComputationGraph.  If not, see <http://www.gnu.org/licenses/>
 */
-package ch.ethz.computationgraph
+package ch.ethz.reactivesim
 
 import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
-
-import ch.ethz.reactivesim.EntityBase;
 
 private case class ClassA(s: String, n: Int)
 

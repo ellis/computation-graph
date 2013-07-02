@@ -1,21 +1,20 @@
 /*
-
 Copyright 2013 Ellis Whitehead
 
-This file is part of ComputationGraph.
+This file is part of reactive-sim.
 
-ComputationGraph is free software: you can redistribute it and/or modify
+reactive-sim is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-ComputationGraph is distributed in the hope that it will be useful,
+reactive-sim is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with ComputationGraph.  If not, see <http://www.gnu.org/licenses/>
+along with reactive-sim.  If not, see <http://www.gnu.org/licenses/>
 */
 package ch.ethz.reactivesim
 
@@ -226,6 +225,9 @@ case class ComputationGraph(
 		}).toSeq : _*)(ListIntOrdering)
 	}
 	
+	/**
+	 * Step through computation by trying to execute the next call in time-order.
+	 */
 	def stepNext(): Option[ComputationGraph] = {
 		timeToStatus.dropWhile(_._2 == CallStatus.Success).headOption match {
 			case Some((time, status)) if status == CallStatus.Ready =>
@@ -234,6 +236,9 @@ case class ComputationGraph(
 		}
 	}
 	
+	/**
+	 * Step through computation by trying to execute the first ready call available.
+	 */
 	def stepOne(): Option[ComputationGraph] = {
 		timeToStatus.filter(_._2 == CallStatus.Ready).headOption match {
 			case Some((time, _)) => Some(stepOne(time))
@@ -241,7 +246,11 @@ case class ComputationGraph(
 		}
 	}
 	
+	/**
+	 * Step through computation by trying to execute all ready calls.
+	 */
 	def stepAllReady(): ComputationGraph = {
+		// TODO: allow this to be run in parallel?
 		timeToStatus.filter(_._2 == CallStatus.Ready).foldLeft(this) { (acc0, pair) =>
 			val (time, status) = pair
 			acc0.stepOne(time)
@@ -272,7 +281,7 @@ case class ComputationGraph(
 				// Check the next call now, if it was waiting
 				val timeToStatus2 = timeToStatus1.keys.dropWhile(t => ListIntOrdering.compare(t, time) <= 0).headOption match {
 					case Some(timeNext) if timeToStatus1(timeNext) == CallStatus.Waiting => timeToStatus1 + (timeNext -> CallStatus.Check)
-					case None => timeToStatus1
+					case _ => timeToStatus1
 				}
 				val timeToWarnings2 = warnings match {
 					case Nil => timeToWarnings - time
