@@ -1,4 +1,4 @@
-package ch.ethz.computationgraph
+package ch.ethz.reactivesim
 
 case class Container(id: String)
 case class ContainerState(volume: Double)
@@ -24,21 +24,21 @@ class Example {
 				val selectors = List[Selector](Selector_Entity(container.id))
 				val fn = (inputs: List[Object]) => {
 					val state = inputs(0).asInstanceOf[ContainerState]
-					List[CallResultItem](CallResultItem_Entity(container.id, state.copy(volume = state.volume - volume)))
+					RsSuccess(List[CallResultItem](CallResultItem_Entity(container.id, state.copy(volume = state.volume - volume))))
 				}
 				Call(fn, selectors)
 			case Dispense(volume, container) =>
 				val selectors = List[Selector](Selector_Entity(container.id))
 				val fn = (inputs: List[Object]) => {
 					val state = inputs(0).asInstanceOf[ContainerState]
-					List[CallResultItem](CallResultItem_Entity(container.id, state.copy(volume = state.volume + volume)))
+					RsSuccess(List[CallResultItem](CallResultItem_Entity(container.id, state.copy(volume = state.volume + volume))))
 				}
 				Call(fn, selectors)
 			case Measure(container) =>
 				val selectors = List[Selector](Selector_Entity(container.id))
 				val fn = (inputs: List[Object]) => {
 					val state = inputs(0).asInstanceOf[ContainerState]
-					List[CallResultItem](CallResultItem_Entity(container.id, state))
+					RsSuccess(List[CallResultItem](CallResultItem_Entity(container.id, state)))
 				}
 				Call(fn, selectors)
 		}
@@ -57,11 +57,11 @@ class Example {
 			val measurement = inputs(0).asInstanceOf[java.lang.Double]
 			val f = measurement / target
 			if (f > 1.1)
-				exec(AlertUser("Threshold exceeded")) :: Nil
+				RsSuccess(exec(AlertUser("Threshold exceeded")) :: Nil)
 			else if (f < 0.9)
-				x(index + 1, target - measurement)
+				RsSuccess(x(index + 1, target - measurement))
 			else
-				Nil
+				RsSuccess(Nil)
 		}
 		CallResultItem_Call(Call(fn, selectors))
 	}
@@ -74,9 +74,9 @@ object Example {
 		val e = new Example
 		val call = Call(
 			fn = (inputs: List[Object]) => {
-				e.x()
+				RsSuccess(e.x())
 			},
-			args = Nil
+			selectors = Nil
 		)
 		var cg = ComputationGraph()
 			.addCall(call)

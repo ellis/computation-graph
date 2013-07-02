@@ -17,9 +17,31 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ComputationGraph.  If not, see <http://www.gnu.org/licenses/>
 */
-package ch.ethz.computationgraph
+package ch.ethz.reactivesim
 
-trait Selector
-case class Selector_Entity(id: String, isOptional: Boolean = false) extends Selector
-case class Selector_List(ids: Seq[String], isOptional: Boolean = false) extends Selector
-case class Selector_All(clazz: Class[_]) extends Selector
+object ListIntOrdering extends Ordering[List[Int]] {
+	def compare(a: List[Int], b: List[Int]): Int = {
+		(a, b) match {
+			case (Nil, Nil) => 0
+			case (Nil, _) => -1
+			case (_, Nil) => 1
+			case (a1 :: rest1, a2 :: rest2) =>
+				if (a1 != a2) a1 - a2
+				else compare(rest1, rest2)
+		}
+	}
+}
+
+object ListStringOrdering extends Ordering[List[String]] {
+	def compare(a: List[String], b: List[String]): Int = {
+		(a, b) match {
+			case (Nil, Nil) => 0
+			case (Nil, _) => -1
+			case (_, Nil) => 1
+			case (a1 :: rest1, a2 :: rest2) =>
+				val n = a1.compare(a2)
+				if (n != 0) n
+				else compare(rest1, rest2)
+		}
+	}
+}

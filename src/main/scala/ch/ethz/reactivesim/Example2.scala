@@ -1,5 +1,6 @@
-package ch.ethz.computationgraph
+package ch.ethz.reactivesim
 
+import scala.language.implicitConversions
 import scala.reflect.Manifest
 
 sealed trait Lookup[A] {
@@ -26,28 +27,28 @@ class Example2 {
 	val A = Container("A")
 	val B = Container("B")
 	
-	def input()(fn: Unit => List[CallResultItem]): Call = {
+	def input()(fn: Unit => RsResult[List[CallResultItem]]): Call = {
 		Call(
 			fn = (inputs: List[Object]) => {
 				fn()
 			},
-			args = List[Selector]()
+			selectors = List[Selector]()
 		)
 	}
 	
-	def input[A](a: Lookup[A])(fn: (A) => List[CallResultItem]): Call = {
+	def input[A](a: Lookup[A])(fn: (A) => RsResult[List[CallResultItem]]): Call = {
 		Call(
 			fn = (inputs: List[Object]) => {
 				val a1 = inputs(0).asInstanceOf[A]
 				fn(a1)
 			},
-			args = List[Selector](a.selector)
+			selectors = List[Selector](a.selector)
 		)
 	}
 	
 	def as[A : Manifest](id: String): Lookup_Entity[A] = Lookup_Entity[A](id)
 	
-	def output(items: CallResultItem*): List[CallResultItem] = items.toList
+	def output(items: CallResultItem*): RsResult[List[CallResultItem]] = RsSuccess(items.toList)
 	
 	implicit def pairToResultEntity(pair: (String, Object)) = CallResultItem_Entity(pair._1, pair._2)
 	implicit def callToResult(call: Call) = CallResultItem_Call(call)
@@ -68,15 +69,15 @@ class Example2 {
 				val selectors = List[Selector](Selector_Entity(container.id))
 				val fn = (inputs: List[Object]) => {
 					val state = inputs(0).asInstanceOf[ContainerState]
-					List[CallResultItem](CallResultItem_Entity(container.id, state))
+					RsSuccess(List[CallResultItem](CallResultItem_Entity(container.id, state)))
 				}
 				Call(fn, selectors)
 		}
 	}
 	
-	def x(): List[CallResultItem] = x(0, 10)
+	def x(): RsResult[List[CallResultItem]] = x(0, 10)
 	
-	def x(index: Int, volume: Double): List[CallResultItem] = {
+	def x(index: Int, volume: Double): RsResult[List[CallResultItem]] = {
 		output(
 			exec(Aspirate(volume, A)),
 			exec(Dispense(volume, B)),
@@ -94,7 +95,7 @@ class Example2 {
 			else if (f < 0.9)
 				x(index + 1, target - measurement)
 			else
-				Nil
+				RsSuccess(Nil)
 		}
 	}
 	
@@ -107,7 +108,7 @@ object Example2 {
 			fn = (inputs: List[Object]) => {
 				e.x()
 			},
-			args = Nil
+			selectors = Nil
 		)
 		var cg = ComputationGraph()
 			.addCall(call)

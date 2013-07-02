@@ -17,8 +17,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ComputationGraph.  If not, see <http://www.gnu.org/licenses/>
 */
-package ch.ethz.computationgraph
+package ch.ethz.reactivesim
 
+import scala.language.existentials
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.HashSet
 import scalaz._
@@ -61,7 +62,9 @@ case class ComputationGraph(
 	val db: EntityBase,
 	val timeToCall: SortedMap[List[Int], Call],
 	val timeToIdToEntity: SortedMap[List[Int], Map[String, Object]],
-	val timeToStatus: SortedMap[List[Int], CallStatus.Value]
+	val timeToStatus: SortedMap[List[Int], CallStatus.Value],
+	val timeToErrors: SortedMap[List[Int], List[String]],
+	val timeToWarnings: SortedMap[List[Int], List[String]]
 ) {
 	val isNextReady = timeToStatus.dropWhile(_._2 == CallStatus.Success).headOption match {
 		case Some((time, status)) if status == CallStatus.Ready => true
@@ -89,7 +92,9 @@ case class ComputationGraph(
 					db2,
 					timeToCall,
 					timeToIdToEntity2,
-					timeToStatus2
+					timeToStatus2,
+					timeToErrors,
+					timeToWarnings
 				)
 			case Command_SetEntity(time, id, entity) =>
 				val g2 = {
@@ -107,7 +112,9 @@ case class ComputationGraph(
 					db2,
 					timeToCall,
 					timeToIdToEntity2,
-					timeToStatus2
+					timeToStatus2,
+					timeToErrors,
+					timeToWarnings
 				)
 			case Command_AddCall(time, call) =>
 				val g2 = g ++ addCall(time, call)
@@ -120,7 +127,9 @@ case class ComputationGraph(
 					db2,
 					timeToCall2,
 					timeToIdToEntity2,
-					timeToStatus2
+					timeToStatus2,
+					timeToErrors,
+					timeToWarnings
 				)
 		}
 	}
@@ -155,7 +164,7 @@ case class ComputationGraph(
 			}
 		}
 		// Add edges from entities and selectors to the call node
-		call.args.flatMap(selector => processSelector(callNode, selector)).foldLeft(g0)(_ + _)
+		call.selectors.flatMap(selector => processSelector(callNode, selector)).foldLeft(g0)(_ + _)
 	}
 	
 	private def processSelector(callNode: CallNode, selector: Selector): Graph[GraphNode, UnDiEdge] = {
@@ -251,26 +260,43 @@ case class ComputationGraph(
 		val acc0 = this
 		val call = acc0.timeToCall(time)
 		val idToEntity = acc0.timeToIdToEntity(time)
-		val args = call.args.map(_ match {
+		val inputs = call.selectors.map(_ match {
 			case s: Selector_Entity => idToEntity(s.id)
 			case s: Selector_List => s.ids.map(idToEntity)
 			case s: Selector_All => Nil // FIXME: add handling for Selector_ALL
 		})
-		val results = call.fn(args)
-		
-		val timeToStatus1 = acc0.timeToStatus + (time -> CallStatus.Success)
-		// Check the next call now, if it was waiting
-		val timeToStatus2 = timeToStatus1.keys.dropWhile(t => ListIntOrdering.compare(t, time) <= 0).headOption match {
-			case Some(timeNext) if timeToStatus1(timeNext) == CallStatus.Waiting => timeToStatus1 + (timeNext -> CallStatus.Check)
-			case None => timeToStatus1
+		call.fn(inputs) match {
+			case RsSuccess(results, warnings) =>
+				// TODO: Add warnings
+				val timeToStatus1 = acc0.timeToStatus + (time -> CallStatus.Success)
+				// Check the next call now, if it was waiting
+				val timeToStatus2 = timeToStatus1.keys.dropWhile(t => ListIntOrdering.compare(t, time) <= 0).headOption match {
+					case Some(timeNext) if timeToStatus1(timeNext) == CallStatus.Waiting => timeToStatus1 + (timeNext -> CallStatus.Check)
+					case None => timeToStatus1
+				}
+				val timeToWarnings2 = warnings match {
+					case Nil => timeToWarnings - time
+					case _ => timeToWarnings + (time -> warnings)
+				}
+				// Set status of call to Success
+				val acc1 = acc0.copy(timeToStatus = timeToStatus2, timeToWarnings = timeToWarnings2)
+				// Add resulting commands
+				val commands = Command_ClearEntities(time) :: processCallResults(time, results)
+				val acc2 = commands.foldLeft(acc1) { (acc, cmd) => acc + cmd }
+				acc2
+			case RsError(errors, warnings) =>
+				val timeToStatus2 = timeToStatus + (time -> CallStatus.Error)
+				val timeToErrors2 = errors match {
+					case Nil => timeToErrors - time
+					case _ => timeToErrors + (time -> errors)
+				}
+				val timeToWarnings2 = warnings match {
+					case Nil => timeToWarnings - time
+					case _ => timeToWarnings + (time -> warnings)
+				}
+				// Set status of call to Success
+				acc0.copy(timeToStatus = timeToStatus2, timeToErrors = timeToErrors2, timeToWarnings = timeToWarnings2)
 		}
-		
-		// Set status of call to Success
-		val acc1 = acc0.copy(timeToStatus = timeToStatus2)
-		// Add resulting commands
-		val commands = Command_ClearEntities(time) :: processCallResults(time, results)
-		val acc2 = commands.foldLeft(acc1) { (acc, cmd) => acc + cmd }
-		acc2
 	}
 	
 	private def processCallResults(time: List[Int], results: List[CallResultItem]): List[Command] = {
@@ -283,9 +309,9 @@ case class ComputationGraph(
 					fn = (args: List[Object]) => {
 						val entity0 = args.head
 						val entity1 = fn(entity0)
-						List(CallResultItem_Entity(id, entity1))
+						RsSuccess(List(CallResultItem_Entity(id, entity1)))
 					},
-					args = Selector_Entity(id) :: Nil
+					selectors = Selector_Entity(id) :: Nil
 				)
 				childIndex += 1
 				Command_AddCall(time ++ List(childIndex), call)
@@ -298,5 +324,5 @@ case class ComputationGraph(
 
 object ComputationGraph {
 	def apply(): ComputationGraph =
-		new ComputationGraph(Graph(), new EntityBase(Map(), Map(), SortedMap()(ListIntOrdering)), SortedMap()(ListIntOrdering), SortedMap()(ListIntOrdering), SortedMap()(ListIntOrdering))
+		new ComputationGraph(Graph(), new EntityBase(Map(), Map(), SortedMap()(ListIntOrdering)), SortedMap()(ListIntOrdering), SortedMap()(ListIntOrdering), SortedMap()(ListIntOrdering), SortedMap()(ListIntOrdering), SortedMap()(ListIntOrdering))
 }

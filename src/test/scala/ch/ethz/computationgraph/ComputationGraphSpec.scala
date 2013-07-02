@@ -24,6 +24,8 @@ import scala.reflect.runtime.universe.TypeTag
 import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
 
+import ch.ethz.reactivesim.CallStatus;
+
 class ComputationGraphSpec extends FunSpec with GivenWhenThen {
 	
 	val call0 = Call(

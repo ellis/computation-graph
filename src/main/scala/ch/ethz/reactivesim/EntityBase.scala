@@ -16,7 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ComputationGraph.  If not, see <http://www.gnu.org/licenses/>
 */
-package ch.ethz.computationgraph
+package ch.ethz.reactivesim
 
 import scala.language.existentials
 import scala.language.implicitConversions

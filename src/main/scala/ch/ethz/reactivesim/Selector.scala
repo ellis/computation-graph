@@ -17,13 +17,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ComputationGraph.  If not, see <http://www.gnu.org/licenses/>
 */
-package ch.ethz.computationgraph
+package ch.ethz.reactivesim
 
-import scala.reflect.runtime.universe.Type
+import scala.language.existentials
 
-case class Call(fn: List[Object] => List[CallResultItem], args: List[Selector])
-
-trait CallResultItem
-case class CallResultItem_Entity(id: String, entity: Object) extends CallResultItem
-case class CallResultItem_Event(id: String, fn: Object => Object) extends CallResultItem
-case class CallResultItem_Call(call: Call) extends CallResultItem
+sealed trait Selector
+case class Selector_Entity(id: String, isOptional: Boolean = false) extends Selector
+case class Selector_List(ids: Seq[String], isOptional: Boolean = false) extends Selector
+case class Selector_All(clazz: Class[_]) extends Selector

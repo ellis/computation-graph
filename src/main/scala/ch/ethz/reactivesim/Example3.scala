@@ -1,4 +1,4 @@
-package ch.ethz.computationgraph
+package ch.ethz.reactivesim
 
 import scala.reflect.Manifest
 /*

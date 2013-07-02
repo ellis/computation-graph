@@ -21,6 +21,8 @@ package ch.ethz.computationgraph
 import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
 
+import ch.ethz.reactivesim.EntityBase;
+
 private case class ClassA(s: String, n: Int)
 
 class EntityBaseSpec extends FunSpec with GivenWhenThen {
