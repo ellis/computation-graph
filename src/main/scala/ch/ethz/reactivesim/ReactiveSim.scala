@@ -16,4 +16,11 @@ class ReactiveSim {
 	def run() {
 		cg = cg.run()
 	}
+	
+	def messages(): List[String] = {
+		val l: List[(List[Int], String)] =
+			cg.timeToErrors.toList.flatMap(pair => pair._2.map(s => pair._1 -> s"ERROR: Call ${pair._1.mkString(".")}: $s")) ++
+			cg.timeToWarnings.toList.flatMap(pair => pair._2.map(s => pair._1 -> s"WARNING: Call ${pair._1.mkString(".")}: $s"))
+		l.sortBy(_._1)(ListIntOrdering).map(_._2)
+	}
 }
